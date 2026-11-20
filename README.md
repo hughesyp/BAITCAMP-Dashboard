@@ -16,7 +16,7 @@ This README is the handover document for a developer picking the project up. For
 | Media library | `/media` | Shared images and videos, with tags and a "brand asset" flag |
 | Targets | `/targets` | Monthly targets (revenue, sales, posts, followers, reach, engagement) with live progress |
 | Ideas & tasks | `/ideas` | Simple three-column board; an idea can be turned into a post |
-| Brand voice | `/brand` | Product summary, voice, guidelines, do/don't, hashtags, links. Read by marketers and fed to the AI writer |
+| Brand guide | `/brand` | Read-only view of the Notion pages (ideal customers, brand voice, branding), fetched live. Also fed to the AI writer. Edited only in Notion |
 | Revenue share | `/earnings` | Monthly statement of a marketer's share; the admin records payouts here |
 | Team (admin) | `/team` | Invite people by email; set start date, revenue share %, role, active/deactivated |
 | Settings (admin) | `/settings` | Which API keys are set, Blotato account mapping, Meta IDs, manual syncs, sync log |
@@ -25,7 +25,7 @@ Supported platforms: Facebook, Instagram, Threads, X and TikTok. The list lives 
 
 ## Roles and business rules
 
-- **Admin** (the owner): everything, including Team, Settings, editing brand voice and targets, and recording payouts. The first account ever created becomes the admin.
+- **Admin** (the owner): everything, including Team, Settings, targets, and recording payouts. Brand content is edited in Notion, not in the app. The first account ever created becomes the admin.
 - **Marketer**: sees all stats and everyone's posts, creates and publishes their own posts, and sees only their own revenue share. Cannot see other people's share terms.
 - There is no public sign-up. People join by admin invite. An account created any other way is inactive and can read nothing.
 - Marketers publish and schedule directly; there is no approval step.
@@ -86,7 +86,8 @@ supabase/
     sync-social/        Pull Facebook + Instagram daily stats into `metrics_daily`
     sync-posts/         Update post status and per-post stats from Blotato
     publish-post/       Send a saved post to Blotato, one submission per platform
-    ai-write/           Generate or rewrite captions via OpenRouter using the brand settings
+    ai-write/           Generate or rewrite captions via OpenRouter, following the Notion brand pages
+    notion-pages/       Read-only, live view of the configured Notion pages (nothing stored)
     invite-user/        Admin-only: send an invite and set the person's terms
     integrations/       Admin-only: which secrets are set; list Blotato accounts
   cron.sql              Template for the scheduled syncs (run once per project)
@@ -105,7 +106,7 @@ supabase/
 | `media_assets` | Media library entries pointing at files in the `media` bucket | Front end |
 | `targets` | Monthly targets, optionally per platform or per person | Admin |
 | `ideas` | Ideas/tasks board | Any active user |
-| `brand_settings` | Single row: brand voice fields and the allowed AI model list | Admin |
+| `brand_settings` | Single row: the allowed AI model list | Admin |
 | `integration_settings` | Non-secret config: Blotato account mapping, Meta page/Instagram IDs | Admin |
 | `payouts` | Revenue share payments recorded as made | Admin |
 | `sync_log` | Result of each sync run | Edge Functions |
@@ -120,7 +121,9 @@ Also: view `team` (names and roles only, so anyone can see who made a post witho
 
 **Stats.** `sync-gumroad` runs hourly and upserts sales by Gumroad sale id, so re-running is safe and refunds are picked up. `sync-social` runs daily and upserts Facebook and Instagram numbers. The front end reads these tables directly and does the summing and charting client-side.
 
-**AI writer.** `ai-write` builds a system prompt from `brand_settings` plus per-platform writing notes, asks the chosen OpenRouter model for JSON, and returns a caption and first comment per platform. The model must be in the admin's allowed list.
+**Brand guide (Notion).** `notion-pages` reads the pages listed in `integration_settings` key `notion` straight from the Notion API on each request, converts the blocks to Markdown (`_shared/notion-md.ts`) and returns it; the front end renders it with react-markdown. Nothing is written to the database (there is a 60-second in-memory cache per function instance). Only listed pages can be requested, and the Notion link is returned to the admin only. The integration should have read-only capability.
+
+**AI writer.** `ai-write` builds a system prompt from the Notion brand pages (read live, as above), the chosen audience (US/Canada or UK) and per-platform writing notes, asks the chosen OpenRouter model for JSON, and returns a caption and first comment per platform. The model must be in the admin's allowed list.
 
 **Invites.** `invite-user` uses the Supabase admin API to email an invite, then sets the role, start date and share % and activates the profile. The emailed link lands on the app with `type=invite` in the URL hash, which shows the set-password screen.
 
@@ -168,5 +171,6 @@ The app was tested end to end against a local Supabase with sample data: sign-up
 - Gumroad sale field names in `sync-gumroad` (written without access to the API docs; the raw response is kept in `sales.raw` to help).
 - Meta metric names in `sync-social`. Facebook reach now uses `page_total_media_view_unique` (unique viewers of Page content), the replacement Meta names for the retired reach metric. Meta retires metrics periodically; each is fetched separately so one failure doesn't block the rest, and failures show in the sync log.
 - Blotato per-post analytics matching in `sync-posts` (response shape taken from the docs).
+- The Notion reader (`notion-pages`): the block-to-Markdown converter was unit-tested on sample blocks, but not against the live Notion API.
 
 Not built: Google Analytics, Google Search Console, and account-level (follower) stats for Threads, X and TikTok. Per-post stats for those three do come through Blotato.

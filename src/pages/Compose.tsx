@@ -33,6 +33,7 @@ export default function Compose() {
   // AI helper
   const [aiInput, setAiInput] = useState(params.get('idea') ?? '')
   const [aiModel, setAiModel] = useState('')
+  const [audience, setAudience] = useState<'us' | 'uk'>('us')
   const [aiBusy, setAiBusy] = useState(false)
 
   const brand = useQuery({
@@ -76,7 +77,7 @@ export default function Compose() {
     setAiBusy(true); setError(null)
     try {
       const input = mode === 'rewrite' ? (aiInput || copy[selected[0]]?.caption) : aiInput
-      const res = await callFn<{ results: Record<string, Copy> }>('ai-write', { mode, input, platforms: selected, model: aiModel || brand.data?.[0] })
+      const res = await callFn<{ results: Record<string, Copy> }>('ai-write', { mode, input, platforms: selected, model: aiModel || brand.data?.[0], audience })
       setCopy((c) => ({ ...c, ...res.results }))
     } catch (e) { setError(e) }
     setAiBusy(false)
@@ -227,8 +228,12 @@ export default function Compose() {
 
         <div className="space-y-4">
           <div className="card space-y-2">
-            <div className="text-sm font-semibold">AI writer (brand voice)</div>
+            <div className="text-sm font-semibold">AI writer (uses the Brand guide)</div>
             <textarea className="input min-h-28" placeholder="Describe the post idea, or paste a rough draft…" value={aiInput} onChange={(e) => setAiInput(e.target.value)} />
+            <select className="input" value={audience} onChange={(e) => setAudience(e.target.value as 'us' | 'uk')} aria-label="Audience">
+              <option value="us">Audience: US/Canada (primary)</option>
+              <option value="uk">Audience: UK (secondary)</option>
+            </select>
             <select className="input" value={aiModel} onChange={(e) => setAiModel(e.target.value)} aria-label="AI model">
               {(brand.data ?? []).map((m) => <option key={m} value={m}>{m}</option>)}
             </select>

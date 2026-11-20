@@ -11,7 +11,7 @@ const NAV = [
   { to: '/media', label: 'Media library' },
   { to: '/targets', label: 'Targets' },
   { to: '/ideas', label: 'Ideas & tasks' },
-  { to: '/brand', label: 'Brand voice' },
+  { to: '/brand', label: 'Brand guide' },
   { to: '/earnings', label: 'Revenue share' },
 ]
 const ADMIN_NAV = [

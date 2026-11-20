@@ -24,6 +24,7 @@ Set only the ones you have; each part of the dashboard switches on when its key 
 supabase secrets set GUMROAD_ACCESS_TOKEN=...   # Gumroad → Settings → Advanced → Applications → Generate access token
 supabase secrets set BLOTATO_API_KEY=...        # Blotato → Settings → API (keep any trailing = characters)
 supabase secrets set OPENROUTER_API_KEY=...     # openrouter.ai/keys
+supabase secrets set NOTION_API_KEY=...         # see section 6b
 supabase secrets set CRON_SECRET=...            # any long random string, used by the scheduler
 supabase secrets set META_ACCESS_TOKEN=...      # see section 6
 ```
@@ -45,7 +46,7 @@ Open the address it prints. Because no accounts exist yet, the login page offers
 
 1. **Settings → Load from Blotato**, choose the account (and page) for each platform, **Save account mapping**.
 2. **Settings → Sync now → Gumroad (all history)** to backfill sales.
-3. **Brand voice**: fill in the product summary, voice and guidelines; adjust the list of AI models.
+3. **Settings → AI models**: adjust the list of OpenRouter models marketers can pick. **Settings → Brand guide pages** lists the Notion pages (the four BAITCAMP pages are filled in already).
 4. **Team**: invite each marketer with their start date and revenue share %.
 5. **Targets**: add this month's targets.
 
@@ -62,6 +63,22 @@ Open `supabase/cron.sql`, replace `YOUR_PROJECT_REF` and `YOUR_CRON_SECRET`, and
 5. `supabase secrets set META_ACCESS_TOKEN=<page token>`, then enter the Page ID and Instagram ID in **Settings**.
 
 Because you are an admin of the app and the page, this works in development mode without Meta app review.
+
+## 6b. Brand guide from Notion
+
+The Brand guide page shows your Notion pages (ideal customers, brand voice, branding) read-only, and the AI writer follows them. Pages are read live from Notion each time; nothing is copied into the database, and editing stays in Notion.
+
+1. Go to notion.so/profile/integrations → **New integration**. Type: **Internal**, workspace: yours. Under Capabilities tick **Read content** only (untick insert and update content, so the dashboard can never change Notion).
+2. Copy the **Internal Integration Secret** and set it (don't paste it into chat):
+
+```powershell
+supabase secrets set NOTION_API_KEY=your-integration-secret
+```
+
+3. Give the integration access to the pages: open each page in Notion → **⋯** → **Connections** → add your integration. Sharing the parent BAITCAMP page covers every page under it.
+4. In the dashboard open **Brand guide**. If a page shows "not found", it hasn't been shared with the integration yet.
+
+To show different or extra pages, paste their Notion links (one per line) into **Settings → Brand guide pages**. Only the pages listed there can be viewed through the dashboard, even if the integration can see more.
 
 ## 7. Deploy to Azure Static Web Apps
 
@@ -131,5 +148,6 @@ This uses the values in `.env.production.local` (step 3). It deploys whatever is
 | Facebook / Instagram account stats | Meta Graph API | Daily followers, reach, engagement |
 | Per-post stats | Blotato analytics | Facebook, Instagram, Threads, X, TikTok. Blotato refreshes them a limited number of times over 30 days depending on plan |
 | Publishing | Blotato API | First comment is native on Facebook and Instagram; on Threads and X it is posted as a reply; not available on TikTok |
+| Brand guide, AI writer's brand rules | Notion API | Read live and read-only; nothing stored |
 
 Not built yet: Google Analytics, Search Console, and account-level (follower) stats for Threads, X and TikTok.

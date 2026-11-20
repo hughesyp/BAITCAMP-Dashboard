@@ -1,88 +1,96 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
+import { format } from 'date-fns'
 import { useEffect, useState } from 'react'
-import { ErrorNote, Notice, PageHeader } from '../components/ui'
+import Markdown, { type Components } from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { Empty, ErrorNote, PageHeader } from '../components/ui'
 import { useAuth } from '../lib/auth'
-import { supabase } from '../lib/supabase'
+import { callFn } from '../lib/supabase'
 
-const FIELDS = [
-  { key: 'product_summary', label: 'About the product', hint: 'What BAITCAMP is, who it is for, price, key benefits.' },
-  { key: 'voice', label: 'Brand voice', hint: 'Tone, personality, how it should sound. Include example sentences.' },
-  { key: 'guidelines', label: 'Guidelines', hint: 'Formatting rules, emoji use, calls to action, anything else.' },
-  { key: 'dos', label: 'Do', hint: 'Things every post should do.' },
-  { key: 'donts', label: "Don't", hint: 'Words, claims and topics to avoid.' },
-  { key: 'hashtags', label: 'Approved hashtags', hint: '' },
-  { key: 'links', label: 'Links to use', hint: 'Gumroad link, website, tracking links.' },
-] as const
+interface NotionPage { id: string; title: string; icon: string | null; url: string | null; last_edited_at: string | null; markdown?: string; error?: string }
 
-type BrandRow = Record<(typeof FIELDS)[number]['key'], string> & { ai_models: string[] }
+const HEX = /^#[0-9a-f]{6}$/i
+
+// Plain-Tailwind styling for the rendered Notion content.
+const components: Components = {
+  h1: ({ children }) => <h2 className="mb-2 mt-6 text-lg font-semibold first:mt-0">{children}</h2>,
+  h2: ({ children }) => <h2 className="mb-2 mt-6 text-lg font-semibold first:mt-0">{children}</h2>,
+  h3: ({ children }) => <h3 className="mb-2 mt-5 text-base font-semibold">{children}</h3>,
+  h4: ({ children }) => <h4 className="mb-1 mt-4 text-sm font-semibold">{children}</h4>,
+  p: ({ children }) => <p className="my-2 leading-relaxed">{children}</p>,
+  ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-6">{children}</ul>,
+  ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-6">{children}</ol>,
+  blockquote: ({ children }) => <blockquote className="my-3 rounded-md border-l-4 border-slate-300 bg-slate-50 px-4 py-1 text-slate-700">{children}</blockquote>,
+  a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className="text-blue-600 underline">{children}</a>,
+  hr: () => <hr className="my-5 border-slate-200" />,
+  table: ({ children }) => <div className="my-3 overflow-x-auto"><table className="w-full border-collapse text-sm">{children}</table></div>,
+  th: ({ children }) => <th className="border border-slate-200 bg-slate-50 px-3 py-1.5 text-left font-semibold">{children}</th>,
+  td: ({ children }) => <td className="border border-slate-200 px-3 py-1.5 align-top">{children}</td>,
+  code: ({ children }) => {
+    const text = String(children)
+    return (
+      <code className="inline-flex items-center gap-1.5 rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.85em]">
+        {HEX.test(text) && <span className="inline-block h-3 w-3 rounded-sm border border-slate-300" style={{ background: text }} />}
+        {children}
+      </code>
+    )
+  },
+  pre: ({ children }) => <pre className="my-3 overflow-x-auto rounded-md bg-slate-100 p-3 text-xs">{children}</pre>,
+}
 
 export default function Brand() {
   const { isAdmin } = useAuth()
-  const qc = useQueryClient()
-  const brand = useQuery({
-    queryKey: ['brand'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('brand_settings').select('*').eq('id', 1).single()
-      if (error) throw new Error(error.message)
-      return data as BrandRow
-    },
+  const list = useQuery({ queryKey: ['notion-pages'], queryFn: () => callFn<{ pages: NotionPage[] }>('notion-pages', { action: 'list' }), retry: false })
+  const pages = list.data?.pages ?? []
+  const [selected, setSelected] = useState<string | null>(null)
+  useEffect(() => { if (!selected && pages.length) setSelected(pages[0].id) }, [pages, selected])
+
+  const page = useQuery({
+    queryKey: ['notion-page', selected],
+    enabled: !!selected,
+    queryFn: () => callFn<{ page: NotionPage }>('notion-pages', { action: 'page', page_id: selected }),
+    retry: false,
   })
-  const [form, setForm] = useState<BrandRow | null>(null)
-  const [models, setModels] = useState('')
-  const [editing, setEditing] = useState(false)
-  const [error, setError] = useState<unknown>(null)
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    if (brand.data) { setForm(brand.data); setModels(brand.data.ai_models.join('\n')) }
-  }, [brand.data])
-
-  async function save() {
-    if (!form) return
-    setError(null); setSaved(false)
-    const ai_models = models.split('\n').map((m) => m.trim()).filter(Boolean)
-    const patch = Object.fromEntries(FIELDS.map((f) => [f.key, form[f.key]]))
-    const { error } = await supabase.from('brand_settings').update({ ...patch, ai_models, updated_at: new Date().toISOString() }).eq('id', 1)
-    if (error) { setError(new Error(error.message)); return }
-    setSaved(true); setEditing(false)
-    qc.invalidateQueries({ queryKey: ['brand'] }); qc.invalidateQueries({ queryKey: ['brand-models'] })
-  }
-
-  if (!form) return <div className="text-sm text-slate-500">{brand.error ? <ErrorNote error={brand.error} /> : 'Loading…'}</div>
+  const p = page.data?.page
 
   return (
     <div>
-      <PageHeader title="Brand voice & guidelines" subtitle="How BAITCAMP should sound. The AI writer follows this too.">
-        {isAdmin && !editing && <button className="btn btn-primary" onClick={() => setEditing(true)}>Edit</button>}
-        {editing && <button className="btn" onClick={() => { setForm(brand.data!); setEditing(false) }}>Cancel</button>}
-        {editing && <button className="btn btn-primary" onClick={save}>Save</button>}
+      <PageHeader title="Brand guide" subtitle="Brand voice, branding and who we're talking to. Read only: these come straight from Notion.">
+        <button className="btn" disabled={page.isFetching} onClick={() => { list.refetch(); page.refetch() }}>{page.isFetching ? 'Loading…' : 'Refresh'}</button>
       </PageHeader>
-      <ErrorNote error={error} />
-      {saved && <Notice>Saved.</Notice>}
+      <ErrorNote error={list.error} />
 
-      <div className="mt-3 space-y-3">
-        {FIELDS.map((f) => (
-          <div key={f.key} className="card">
-            <label className="text-sm font-semibold" htmlFor={f.key}>{f.label}</label>
-            {editing ? (
+      {list.isLoading ? <div className="text-sm text-slate-500">Loading…</div> : list.error ? null : pages.length === 0 ? (
+        <Empty>No Notion pages are set up yet.{isAdmin ? ' Add them in Settings.' : ''}</Empty>
+      ) : (
+        <>
+          <div className="mb-4 flex flex-wrap gap-2" role="tablist">
+            {pages.map((x) => (
+              <button key={x.id} role="tab" aria-selected={selected === x.id} onClick={() => setSelected(x.id)}
+                className={`rounded-md border px-3 py-1.5 text-sm ${selected === x.id ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}>
+                {x.icon ? `${x.icon} ` : ''}{x.title}
+              </button>
+            ))}
+          </div>
+
+          <div className="card max-w-4xl">
+            {page.isLoading ? <div className="text-sm text-slate-500">Loading from Notion…</div> : page.error ? <ErrorNote error={page.error} /> : !p ? null : (
               <>
-                {f.hint && <div className="mb-1 text-xs text-slate-500">{f.hint}</div>}
-                <textarea id={f.key} className="input mt-1 min-h-28" value={form[f.key]} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
+                <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 pb-3">
+                  <h1 className="text-xl font-semibold">{p.icon ? `${p.icon} ` : ''}{p.title}</h1>
+                  <div className="text-xs text-slate-500">
+                    {p.last_edited_at && `Updated ${format(new Date(p.last_edited_at), 'd MMM yyyy')}`}
+                    {p.url && <> · <a href={p.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Edit in Notion</a></>}
+                  </div>
+                </div>
+                <div className="text-sm text-slate-800">
+                  {p.markdown ? <Markdown remarkPlugins={[remarkGfm]} components={components}>{p.markdown}</Markdown> : <span className="text-slate-400">This page is empty.</span>}
+                </div>
               </>
-            ) : (
-              <div className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{form[f.key] || <span className="text-slate-400">Not set yet.</span>}</div>
             )}
           </div>
-        ))}
-        {isAdmin && (
-          <div className="card">
-            <label className="text-sm font-semibold" htmlFor="models">AI models marketers can choose (OpenRouter ids, one per line)</label>
-            {editing ? <textarea id="models" className="input mt-1 min-h-24 font-mono" value={models} onChange={(e) => setModels(e.target.value)} />
-              : <div className="mt-1 whitespace-pre-wrap font-mono text-sm text-slate-700">{models}</div>}
-            <div className="mt-1 text-xs text-slate-500">The first one is the default. Find ids at openrouter.ai/models.</div>
-          </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   )
 }

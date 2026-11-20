@@ -1,7 +1,9 @@
 // Writes or rewrites captions in the brand voice via OpenRouter.
-// Body: { mode: "generate" | "rewrite", input: string, platforms: string[], model?: string }
+// Body: { mode: "generate" | "rewrite", input: string, platforms: string[], model?: string, audience?: "us" | "uk" }
+// Brand voice, branding and ideal-customer pages are read live from Notion for each request.
 // Returns: { results: { [platform]: { caption, first_comment } } }
 import { getCaller, HttpError, serve } from "../_shared/common.ts";
+import { configuredPageIds, getPage } from "../_shared/notion.ts";
 
 const PLATFORM_NOTES: Record<string, string> = {
   facebook: "Facebook page post. Conversational, 1-3 short paragraphs. Links work in the caption; a link can also go in the first comment.",
@@ -24,17 +26,22 @@ serve(async (req, body, db) => {
   const { data: brand } = await db.from("brand_settings").select("*").eq("id", 1).single();
   const allowed: string[] = brand?.ai_models ?? [];
   const model = allowed.includes(body.model) ? body.model : allowed[0];
-  if (!model) throw new HttpError(400, "No AI models are configured (admin: Brand voice)");
+  if (!model) throw new HttpError(400, "No AI models are configured (admin: Settings)");
+
+  // Live read of the Notion brand pages. A page that fails is skipped rather than blocking the writer.
+  const docs = (await Promise.all((await configuredPageIds(db)).map((id) => getPage(id, true).catch(() => null))))
+    .filter((p) => p && p.markdown)
+    .map((p) => `# ${p!.title}\n\n${p!.markdown}`);
+  if (!docs.length) throw new HttpError(400, "Couldn't read the brand pages from Notion (admin: check Settings)");
+  const brandText = docs.join("\n\n---\n\n").slice(0, 60_000);
+  const audience = body.audience === "uk"
+    ? "Write for the UK (secondary) ideal customer: UK spelling, units and vocabulary as set out in the brand pages."
+    : "Write for the US/Canada (primary) ideal customer: US spelling, units and vocabulary as set out in the brand pages.";
 
   const system = [
-    "You write social media posts for a brand. Follow the brand voice and guidelines exactly.",
-    brand?.product_summary && `## Product\n${brand.product_summary}`,
-    brand?.voice && `## Brand voice\n${brand.voice}`,
-    brand?.guidelines && `## Guidelines\n${brand.guidelines}`,
-    brand?.dos && `## Do\n${brand.dos}`,
-    brand?.donts && `## Don't\n${brand.donts}`,
-    brand?.hashtags && `## Approved hashtags\n${brand.hashtags}`,
-    brand?.links && `## Links to use\n${brand.links}`,
+    "You write social media posts for BAITCAMP. Follow the brand voice and its rules exactly; where the brand pages are about long-form posts (blog structure, length, tables), apply only what makes sense for a social caption.",
+    "## Brand pages\n\n" + brandText,
+    "## Audience\n" + audience,
     "## Platforms\n" + platforms.map((p) => `- ${p}: ${PLATFORM_NOTES[p]}`).join("\n"),
     `Respond with JSON only, in the shape {"<platform>": {"caption": "...", "first_comment": "..."}} with exactly these platform keys: ${platforms.join(", ")}. Use an empty string when no first comment is appropriate. Never invent facts, prices or claims that are not in the brief or the brand information.`,
   ].filter(Boolean).join("\n\n");

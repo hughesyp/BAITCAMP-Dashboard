@@ -13,6 +13,7 @@ const SECRETS = [
   { key: 'blotato', label: 'Blotato', secret: 'BLOTATO_API_KEY' },
   { key: 'meta', label: 'Facebook + Instagram', secret: 'META_ACCESS_TOKEN' },
   { key: 'openrouter', label: 'OpenRouter (AI)', secret: 'OPENROUTER_API_KEY' },
+  { key: 'notion', label: 'Notion (brand guide)', secret: 'NOTION_API_KEY' },
   { key: 'cron', label: 'Scheduler', secret: 'CRON_SECRET' },
 ]
 
@@ -24,6 +25,8 @@ export default function Settings() {
   const [accounts, setAccounts] = useState<BlotatoAccount[] | null>(null)
   const [mapping, setMapping] = useState<Mapping>({})
   const [meta, setMeta] = useState({ pageId: '', igUserId: '' })
+  const [notionPages, setNotionPages] = useState('')
+  const [models, setModels] = useState('')
 
   const status = useQuery({ queryKey: ['integration-status'], queryFn: () => callFn<Record<string, boolean>>('integrations', { action: 'status' }), retry: false })
   const settings = useQuery({
@@ -43,7 +46,21 @@ export default function Settings() {
     if (!settings.data) return
     setMapping(settings.data.blotato ?? {})
     setMeta({ pageId: '', igUserId: '', ...(settings.data.meta ?? {}) })
+    setNotionPages((settings.data.notion?.pages ?? []).join('\n'))
   }, [settings.data])
+
+  const brand = useQuery({
+    queryKey: ['brand-models'],
+    queryFn: async () => (await supabase.from('brand_settings').select('ai_models').eq('id', 1).single()).data?.ai_models as string[] | undefined,
+  })
+  useEffect(() => { if (brand.data) setModels(brand.data.join('\n')) }, [brand.data])
+
+  const lines = (t: string) => t.split('\n').map((l) => l.trim()).filter(Boolean)
+  const saveModels = () => run('models', async () => {
+    const { error } = await supabase.from('brand_settings').update({ ai_models: lines(models), updated_at: new Date().toISOString() }).eq('id', 1)
+    if (error) throw new Error(error.message)
+    qc.invalidateQueries({ queryKey: ['brand-models'] })
+  }, () => 'Saved.')
 
   async function run(label: string, fn: () => Promise<unknown>, done?: (r: any) => string) {
     setBusy(label); setError(null); setNotice(null)
@@ -131,6 +148,23 @@ export default function Settings() {
             <input id="igId" className="input" value={meta.igUserId} onChange={(e) => setMeta({ ...meta, igUserId: e.target.value.trim() })} />
           </div>
           <button className="btn btn-primary" onClick={() => saveSetting('meta', meta)}>Save</button>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="card space-y-2">
+          <div className="text-sm font-semibold">Brand guide pages (Notion)</div>
+          <label className="label" htmlFor="notionPages">Notion page links or IDs, one per line, in the order they should appear</label>
+          <textarea id="notionPages" className="input min-h-28 font-mono text-xs" value={notionPages} onChange={(e) => setNotionPages(e.target.value)} />
+          <p className="text-xs text-slate-500">Shown read-only on the Brand guide page and used by the AI writer. Each page must be shared with the Notion integration (page ⋯ → Connections). Nothing is copied: pages are read live from Notion.</p>
+          <button className="btn btn-primary" onClick={() => { saveSetting('notion', { pages: lines(notionPages) }); qc.invalidateQueries({ queryKey: ['notion-pages'] }) }}>Save</button>
+        </div>
+        <div className="card space-y-2">
+          <div className="text-sm font-semibold">AI models</div>
+          <label className="label" htmlFor="models">OpenRouter model IDs marketers can choose, one per line (the first is the default)</label>
+          <textarea id="models" className="input min-h-28 font-mono text-xs" value={models} onChange={(e) => setModels(e.target.value)} />
+          <p className="text-xs text-slate-500">Find IDs at openrouter.ai/models.</p>
+          <button className="btn btn-primary" disabled={busy === 'models'} onClick={saveModels}>Save</button>
         </div>
       </div>
 

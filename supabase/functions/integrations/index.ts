@@ -13,6 +13,7 @@ serve(async (req, body, db) => {
       blotato: has("BLOTATO_API_KEY"),
       meta: has("META_ACCESS_TOKEN"),
       openrouter: has("OPENROUTER_API_KEY"),
+      notion: has("NOTION_API_KEY"),
       cron: has("CRON_SECRET"),
     };
   }

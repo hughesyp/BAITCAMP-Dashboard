@@ -11,7 +11,6 @@ function normaliseSource(referrer: string | null | undefined): string {
   host = host.replace(/^(www|m|l|lm|mobile)\./, "");
   if (host.includes("facebook") || host === "fb.com" || host === "fb.me") return "facebook";
   if (host.includes("instagram")) return "instagram";
-  if (host.includes("linkedin") || host === "lnkd.in") return "linkedin";
   if (host.includes("threads.")) return "threads";
   if (host === "t.co" || host.includes("twitter") || host === "x.com") return "x";
   if (host.includes("tiktok")) return "tiktok";

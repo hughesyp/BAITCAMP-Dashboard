@@ -110,7 +110,7 @@ export default function Posts() {
           </table>
         </div>
       )}
-      <p className="mt-3 text-xs text-slate-500">Post stats come from Blotato and update a few times over 30 days. LinkedIn post stats aren't available from Blotato.</p>
+      <p className="mt-3 text-xs text-slate-500">Post stats come from Blotato and update a few times over 30 days.</p>
     </div>
   )
 }

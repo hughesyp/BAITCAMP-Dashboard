@@ -73,7 +73,7 @@ create index sales_created_at_idx on public.sales (created_at);
 
 -- ---------- daily account-level metrics ----------
 create table public.metrics_daily (
-  platform text not null,              -- facebook, instagram, linkedin, threads, twitter, tiktok, ga4, gsc
+  platform text not null,              -- facebook, instagram, threads, twitter, tiktok, ga4, gsc
   date date not null,
   metric text not null,                -- followers, reach, impressions, engagement, profile_views, clicks, sessions...
   value numeric not null default 0,

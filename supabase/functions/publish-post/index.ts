@@ -1,7 +1,7 @@
 // Sends a post to Blotato, one submission per selected platform.
 // Body: { post_id: string }
 // Account mapping lives in integration_settings key "blotato":
-//   { facebook: { accountId, pageId }, instagram: { accountId }, linkedin: { accountId, pageId? }, ... }
+//   { facebook: { accountId, pageId }, instagram: { accountId }, ... }
 import { blotato, getCaller, getSetting, HttpError, serve } from "../_shared/common.ts";
 
 const VIDEO = /\.(mp4|mov|m4v|webm)(\?|$)/i;
@@ -22,8 +22,6 @@ function buildTarget(platform: string, acct: any, t: any, hasVideo: boolean) {
       if (t.first_comment) target.firstComment = t.first_comment;
       return target;
     }
-    case "linkedin":
-      return acct.pageId ? { targetType: "linkedin", pageId: acct.pageId } : { targetType: "linkedin" };
     case "threads":
       return { targetType: "threads" };
     case "twitter":

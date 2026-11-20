@@ -54,14 +54,14 @@ serve(async (req, _body, db) => {
   }
 
   // 2. Metrics for posts published in the last 90 days. Blotato reports metrics per published
-  //    post, matched here by public URL. (Blotato has no LinkedIn analytics.)
+  //    post, matched here by public URL.
   const since = new Date(Date.now() - 90 * 86400000).toISOString();
   const { data: published } = await db.from("post_targets")
     .select("id, platform, public_url, blotato_post_id")
     .eq("status", "published")
     .gte("published_at", since);
 
-  const platforms = [...new Set((published ?? []).map((p) => p.platform))].filter((p) => p !== "linkedin");
+  const platforms = [...new Set((published ?? []).map((p) => p.platform))];
   for (const platform of platforms) {
     try {
       const res = await blotato(`/analytics?since=${encodeURIComponent(since)}&platform=${platform}&limit=100`);

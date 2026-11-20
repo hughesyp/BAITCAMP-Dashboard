@@ -3,7 +3,6 @@ import { format, subDays } from 'date-fns'
 export const PLATFORMS = [
   { id: 'facebook', label: 'Facebook', firstComment: true, color: '#1877f2' },
   { id: 'instagram', label: 'Instagram', firstComment: true, color: '#d6249f' },
-  { id: 'linkedin', label: 'LinkedIn', firstComment: false, color: '#0a66c2' },
   { id: 'threads', label: 'Threads', firstComment: true, color: '#111111' },
   { id: 'twitter', label: 'X', firstComment: true, color: '#555555' },
   { id: 'tiktok', label: 'TikTok', firstComment: false, color: '#fe2c55' },

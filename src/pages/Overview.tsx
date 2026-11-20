@@ -109,7 +109,7 @@ export default function Overview() {
         <div className="card overflow-x-auto lg:col-span-2">
           <div className="mb-2 text-sm font-semibold">Social accounts</div>
           {platforms.length === 0 ? (
-            <Empty>No social stats yet. They appear after the first sync once Facebook, Instagram and LinkedIn are connected in Settings.</Empty>
+            <Empty>No social stats yet. They appear after the first sync once Facebook and Instagram are connected in Settings.</Empty>
           ) : (
             <table className="w-full">
               <thead>

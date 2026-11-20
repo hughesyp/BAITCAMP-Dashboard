@@ -21,7 +21,7 @@ export default function Compose() {
   const [postId, setPostId] = useState<string | null>(editId)
   const [title, setTitle] = useState('')
   const [media, setMedia] = useState<string[]>(params.get('media') ? [params.get('media')!] : [])
-  const [selected, setSelected] = useState<PlatformId[]>(['facebook', 'instagram', 'linkedin'])
+  const [selected, setSelected] = useState<PlatformId[]>(['facebook', 'instagram'])
   const [copy, setCopy] = useState(emptyCopy)
   const [when, setWhen] = useState('')
   const [showLibrary, setShowLibrary] = useState(false)

@@ -12,7 +12,6 @@ serve(async (req, body, db) => {
       gumroad: has("GUMROAD_ACCESS_TOKEN"),
       blotato: has("BLOTATO_API_KEY"),
       meta: has("META_ACCESS_TOKEN"),
-      linkedin: has("LINKEDIN_ACCESS_TOKEN"),
       openrouter: has("OPENROUTER_API_KEY"),
       cron: has("CRON_SECRET"),
     };
@@ -23,7 +22,7 @@ serve(async (req, body, db) => {
     const accounts = [];
     for (const a of res.items ?? []) {
       let subaccounts: any[] = [];
-      if (["facebook", "linkedin"].includes(a.platform)) {
+      if (a.platform === "facebook") {
         try {
           subaccounts = (await blotato(`/users/me/accounts/${a.id}/subaccounts`)).items ?? [];
         } catch { /* none */ }

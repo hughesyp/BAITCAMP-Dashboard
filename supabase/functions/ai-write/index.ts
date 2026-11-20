@@ -6,7 +6,6 @@ import { getCaller, HttpError, serve } from "../_shared/common.ts";
 const PLATFORM_NOTES: Record<string, string> = {
   facebook: "Facebook page post. Conversational, 1-3 short paragraphs. Links work in the caption; a link can also go in the first comment.",
   instagram: "Instagram. Strong first line, line breaks, links are not clickable in captions. Put hashtags in the first comment.",
-  linkedin: "LinkedIn. Professional but human, hook in the first two lines, short paragraphs, at most 3 hashtags. No first comment available (leave it empty).",
   threads: "Threads. Under 500 characters, casual, conversational. First comment is posted as a reply.",
   twitter: "X (Twitter). Under 280 characters. First comment is posted as a reply (good place for the link).",
   tiktok: "TikTok caption. Very short, punchy, a few relevant hashtags. No first comment available (leave it empty).",

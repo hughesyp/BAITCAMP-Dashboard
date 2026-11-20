@@ -12,7 +12,6 @@ const SECRETS = [
   { key: 'gumroad', label: 'Gumroad', secret: 'GUMROAD_ACCESS_TOKEN' },
   { key: 'blotato', label: 'Blotato', secret: 'BLOTATO_API_KEY' },
   { key: 'meta', label: 'Facebook + Instagram', secret: 'META_ACCESS_TOKEN' },
-  { key: 'linkedin', label: 'LinkedIn', secret: 'LINKEDIN_ACCESS_TOKEN' },
   { key: 'openrouter', label: 'OpenRouter (AI)', secret: 'OPENROUTER_API_KEY' },
   { key: 'cron', label: 'Scheduler', secret: 'CRON_SECRET' },
 ]
@@ -25,7 +24,6 @@ export default function Settings() {
   const [accounts, setAccounts] = useState<BlotatoAccount[] | null>(null)
   const [mapping, setMapping] = useState<Mapping>({})
   const [meta, setMeta] = useState({ pageId: '', igUserId: '' })
-  const [linkedin, setLinkedin] = useState({ organizationId: '' })
 
   const status = useQuery({ queryKey: ['integration-status'], queryFn: () => callFn<Record<string, boolean>>('integrations', { action: 'status' }), retry: false })
   const settings = useQuery({
@@ -45,7 +43,6 @@ export default function Settings() {
     if (!settings.data) return
     setMapping(settings.data.blotato ?? {})
     setMeta({ pageId: '', igUserId: '', ...(settings.data.meta ?? {}) })
-    setLinkedin({ organizationId: '', ...(settings.data.linkedin ?? {}) })
   }, [settings.data])
 
   async function run(label: string, fn: () => Promise<unknown>, done?: (r: any) => string) {
@@ -99,7 +96,7 @@ export default function Settings() {
             const options = (accounts ?? []).filter((a) => a.platform === p.id)
             const cur = mapping[p.id] ?? {}
             const subs = options.find((a) => a.id === cur.accountId)?.subaccounts ?? []
-            const needsPage = p.id === 'facebook' || p.id === 'linkedin'
+            const needsPage = p.id === 'facebook'
             return (
               <div key={p.id} className="grid items-center gap-2 sm:grid-cols-3">
                 <div className="text-sm font-medium">{p.label}</div>
@@ -111,7 +108,7 @@ export default function Settings() {
                 ) : <div className="text-sm text-slate-500">{cur.accountId ? `Account ${cur.accountId}` : 'Not linked'}</div>}
                 {needsPage && (accounts ? (
                   <select className="input" value={cur.pageId ?? ''} aria-label={`${p.label} page`} onChange={(e) => setMapping({ ...mapping, [p.id]: { ...cur, pageId: e.target.value || undefined } })}>
-                    <option value="">{p.id === 'linkedin' ? 'Personal profile' : 'Choose page'}</option>
+                    <option value="">Choose page</option>
                     {subs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 ) : <div className="text-sm text-slate-500">{cur.pageId ? `Page ${cur.pageId}` : ''}</div>)}
@@ -122,8 +119,8 @@ export default function Settings() {
         <button className="btn btn-primary mt-3" disabled={!accounts || busy === 'save-blotato'} onClick={() => saveSetting('blotato', mapping)}>Save account mapping</button>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <div className="card space-y-3">
+      <div className="mt-4">
+        <div className="card max-w-xl space-y-3">
           <div className="text-sm font-semibold">Facebook + Instagram stats</div>
           <div>
             <label className="label" htmlFor="pageId">Facebook Page ID</label>
@@ -134,15 +131,6 @@ export default function Settings() {
             <input id="igId" className="input" value={meta.igUserId} onChange={(e) => setMeta({ ...meta, igUserId: e.target.value.trim() })} />
           </div>
           <button className="btn btn-primary" onClick={() => saveSetting('meta', meta)}>Save</button>
-        </div>
-        <div className="card space-y-3">
-          <div className="text-sm font-semibold">LinkedIn stats</div>
-          <div>
-            <label className="label" htmlFor="orgId">LinkedIn company page (organization) ID</label>
-            <input id="orgId" className="input" value={linkedin.organizationId} onChange={(e) => setLinkedin({ organizationId: e.target.value.trim() })} />
-          </div>
-          <button className="btn btn-primary" onClick={() => saveSetting('linkedin', linkedin)}>Save</button>
-          <p className="text-xs text-slate-500">LinkedIn only provides stats for company pages, and access tokens expire about every 60 days.</p>
         </div>
       </div>
 

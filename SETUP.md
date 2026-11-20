@@ -26,7 +26,6 @@ supabase secrets set BLOTATO_API_KEY=...        # Blotato → Settings → API (
 supabase secrets set OPENROUTER_API_KEY=...     # openrouter.ai/keys
 supabase secrets set CRON_SECRET=...            # any long random string, used by the scheduler
 supabase secrets set META_ACCESS_TOKEN=...      # see section 6
-supabase secrets set LINKEDIN_ACCESS_TOKEN=...  # see section 7
 ```
 
 ## 3. Run it locally
@@ -64,16 +63,7 @@ Open `supabase/cron.sql`, replace `YOUR_PROJECT_REF` and `YOUR_CRON_SECRET`, and
 
 Because you are an admin of the app and the page, this works in development mode without Meta app review.
 
-## 7. LinkedIn stats
-
-1. At linkedin.com/developers create an app linked to the BAITCAMP company page and request the **Community Management API** product (LinkedIn reviews this; it can take days or weeks).
-2. Once approved, generate a token with `r_organization_social` and `rw_organization_admin` scopes (Auth tab → OAuth token tools).
-3. `supabase secrets set LINKEDIN_ACCESS_TOKEN=...` and enter the organization ID (the number in the company page admin URL) in **Settings**.
-4. LinkedIn tokens expire after about 60 days; repeat step 2-3 when the sync log shows an auth error.
-
-LinkedIn does not provide analytics for personal profiles, only company pages.
-
-## 8. Deploy to Azure Static Web Apps
+## 7. Deploy to Azure Static Web Apps
 
 1. Push this repo to GitHub.
 2. In the Azure portal create a **Static Web App** (Free plan), connect the GitHub repo and branch `main`, build preset **React**, app location `/`, output location `dist`. Azure adds its own deploy workflow to the repo.
@@ -95,8 +85,7 @@ LinkedIn does not provide analytics for personal profiles, only company pages.
 | --- | --- | --- |
 | Revenue, sales, sources | Gumroad API | Source is the referrer Gumroad records for each sale |
 | Facebook / Instagram account stats | Meta Graph API | Daily followers, reach, engagement |
-| LinkedIn account stats | LinkedIn API | Company pages only |
-| Per-post stats | Blotato analytics | Facebook, Instagram, Threads, X, TikTok. Not LinkedIn. Blotato refreshes them a limited number of times over 30 days depending on plan |
-| Publishing | Blotato API | First comment is native on Facebook and Instagram; on Threads and X it is posted as a reply; not available on LinkedIn or TikTok |
+| Per-post stats | Blotato analytics | Facebook, Instagram, Threads, X, TikTok. Blotato refreshes them a limited number of times over 30 days depending on plan |
+| Publishing | Blotato API | First comment is native on Facebook and Instagram; on Threads and X it is posted as a reply; not available on TikTok |
 
 Not built yet: Google Analytics, Search Console, and account-level (follower) stats for Threads, X and TikTok.

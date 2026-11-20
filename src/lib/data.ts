@@ -33,7 +33,7 @@ export interface Post {
 export interface Target {
   id: string
   month: string
-  kind: 'revenue' | 'sales_count' | 'posts' | 'followers' | 'reach' | 'engagement'
+  kind: 'revenue' | 'sales_count' | 'posts' | 'followers' | 'reach' | 'engagement' | 'email_subscribers' | 'email_new_subscribers'
   platform: string | null
   marketer_id: string | null
   target_value: number
@@ -109,6 +109,13 @@ export function targetProgress(t: Target, d: MonthData): number {
   switch (t.kind) {
     case 'revenue':
       return d.sales.reduce((a, s) => a + saleNet(s), 0) / 100
+    case 'email_subscribers': {
+      // latest active-subscriber count recorded in the month
+      const latest = d.metrics.filter((r) => r.platform === 'mailerlite' && r.metric === 'subscribers').sort((a, b) => b.date.localeCompare(a.date))[0]
+      return latest ? Number(latest.value) : 0
+    }
+    case 'email_new_subscribers':
+      return sumMetric(d.metrics, 'new_subscribers', 'mailerlite')
     case 'sales_count':
       return d.sales.filter(saleCounts).length
     case 'posts':
@@ -129,6 +136,8 @@ export function targetProgress(t: Target, d: MonthData): number {
 export const TARGET_KINDS: Record<Target['kind'], string> = {
   revenue: 'Net revenue ($)',
   sales_count: 'Number of sales',
+  email_subscribers: 'Email subscribers (total)',
+  email_new_subscribers: 'New email subscribers',
   posts: 'Posts published',
   followers: 'Followers (total)',
   reach: 'Reach',

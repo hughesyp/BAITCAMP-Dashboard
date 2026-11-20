@@ -31,7 +31,7 @@ export default function Targets({ manage = false }: { manage?: boolean }) {
 
   async function add(e: FormEvent) {
     e.preventDefault(); setError(null)
-    const platformOk = !['revenue', 'sales_count'].includes(form.kind)
+    const platformOk = !['revenue', 'sales_count', 'email_subscribers', 'email_new_subscribers'].includes(form.kind)
     const { error } = await supabase.from('targets').insert({
       month, kind: form.kind,
       platform: platformOk && form.platform ? form.platform : null,
@@ -71,7 +71,7 @@ export default function Targets({ manage = false }: { manage?: boolean }) {
                   <div>
                     <div className="text-sm font-semibold">{TARGET_KINDS[t.kind]}</div>
                     <div className="text-xs text-slate-500">
-                      {t.platform ? platformLabel(t.platform) : 'All platforms'} · {t.marketer_id ? teamName(team.data, t.marketer_id) : 'Whole team'}
+                      {t.kind.startsWith('email_') ? 'MailerLite' : t.platform ? platformLabel(t.platform) : 'All platforms'} · {t.marketer_id ? teamName(team.data, t.marketer_id) : 'Whole team'}
                     </div>
                   </div>
                   {isAdmin && <button className="text-xs text-red-700 hover:underline" onClick={() => remove(t.id)}>Delete</button>}
@@ -100,7 +100,7 @@ export default function Targets({ manage = false }: { manage?: boolean }) {
             </div>
             <div>
               <label className="label" htmlFor="tplatform">Platform</label>
-              <select id="tplatform" className="input" value={form.platform} disabled={['revenue', 'sales_count'].includes(form.kind)} onChange={(e) => setForm({ ...form, platform: e.target.value })}>
+              <select id="tplatform" className="input" value={form.platform} disabled={['revenue', 'sales_count', 'email_subscribers', 'email_new_subscribers'].includes(form.kind)} onChange={(e) => setForm({ ...form, platform: e.target.value })}>
                 <option value="">All platforms</option>
                 {PLATFORMS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
               </select>

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && swa deploy ./dist --env production"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",
@@ -19,6 +20,7 @@
     "recharts": "^3.11.0"
   },
   "devDependencies": {
+    "@azure/static-web-apps-cli": "^2.1.0",
     "@tailwindcss/vite": "^4.3.5",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",

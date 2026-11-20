@@ -59,7 +59,7 @@ Two rules follow from this and should be kept:
 - Tailwind CSS v4 (small set of shared classes in `src/index.css`: `card`, `btn`, `input`, `label`, `th`, `td`)
 - Recharts for charts, date-fns for dates
 - Supabase: Postgres, Auth, Storage, Edge Functions (Deno/TypeScript)
-- Hosting: Azure Static Web Apps (static files only; `public/staticwebapp.config.json` handles client-side routing)
+- Hosting: Azure Static Web Apps, deployed from a local build with a deployment token via `npm run deploy` (no repo connection; see SETUP.md section 7). `public/staticwebapp.config.json` handles client-side routing
 
 ## Code map
 
@@ -151,6 +151,7 @@ Before committing, run `npm run build`; it type-checks the whole front end.
 - **Add an account-level metric or data source** (e.g. Google Analytics): write rows into `metrics_daily` with a new `platform`/`metric` name from a new or existing sync function. The Overview table and target maths pick up `followers`, `reach` and `engagement` automatically.
 - **Change the database:** add a new file in `supabase/migrations/` (never edit one that has been deployed), then `supabase db push`.
 - **Change a function:** edit it and run `supabase functions deploy <name>`.
+- **Release the front end:** set `SWA_CLI_DEPLOYMENT_TOKEN` in the shell and run `npm run deploy`. Live Supabase values for the build go in `.env.production.local`.
 
 ## Gotchas
 

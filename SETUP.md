@@ -65,19 +65,45 @@ Because you are an admin of the app and the page, this works in development mode
 
 ## 7. Deploy to Azure Static Web Apps
 
-1. Push this repo to GitHub.
-2. In the Azure portal create a **Static Web App** (Free plan), connect the GitHub repo and branch `main`, build preset **React**, app location `/`, output location `dist`. Azure adds its own deploy workflow to the repo.
-3. In the GitHub repo add two **Actions secrets or variables** and expose them to the build step of the generated workflow as environment variables:
+The site is built on your computer and uploaded with a deployment token. Azure is not connected to GitHub or any repo, and no build runs in the cloud.
 
-```yaml
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+### One-time setup
+
+1. In the Azure portal create a **Static Web App**:
+   - Plan: **Free**
+   - Deployment details → Source: **Other** (not GitHub). This is what stops Azure asking for a repo.
+2. When it's created, open it → **Overview** → **Manage deployment token** and copy the token. Treat it like a password: anyone with it can replace the live site. Don't commit it or paste it into chat. You can reset it on the same screen at any time.
+3. In this folder, create a file called `.env.production.local` with the **live** Supabase details (it is git-ignored, and is only used when building for deployment, so `.env.local` can keep pointing at a local Supabase for development):
+
+```
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-public-key
 ```
 
-4. In Supabase → Authentication → URL Configuration set **Site URL** to the Azure address (or your custom domain) and add it to **Redirect URLs**, so invite and password-reset emails link back to the live site.
+4. Custom domain (`dashboard.baitcamp.net`): in the Static Web App → **Custom domains** → Add → Custom domain on other DNS. Azure gives you a CNAME record to add at your DNS provider, pointing `dashboard` at the `*.azurestaticapps.net` address. HTTPS is set up automatically once it validates.
+5. In Supabase → Authentication → URL Configuration set **Site URL** to `https://dashboard.baitcamp.net` and add it to **Redirect URLs**, so invite and password-reset emails link to the live site. If you deploy before the domain is ready, use the `*.azurestaticapps.net` address for now and change it later.
 
-`public/staticwebapp.config.json` already handles page refreshes on deep links.
+### Each deploy
+
+In PowerShell in this folder, put the token in the session (it is not saved anywhere):
+
+```powershell
+$env:SWA_CLI_DEPLOYMENT_TOKEN = "paste-the-deployment-token-here"
+```
+
+Then build and upload:
+
+```powershell
+npm run deploy
+```
+
+This runs the type-check and build, then uploads `dist` to the **production** environment. The first run downloads Azure's upload tool, so it takes a little longer.
+
+Notes:
+- `npm run deploy` deploys whatever is in this folder, committed or not. Commit first if you want git to match what's live.
+- The front end and the database/functions deploy separately. If a change touched `supabase/`, also run `supabase db push` and/or `supabase functions deploy`.
+- `public/staticwebapp.config.json` is copied into the build and handles page refreshes on deep links (e.g. `/posts`).
+- `npm audit` reports warnings from the Azure upload tool; these are development-only and nothing from it ships to the browser (`npm audit --omit=dev` is clean).
 
 ## What comes from where
 

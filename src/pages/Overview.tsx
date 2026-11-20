@@ -140,7 +140,7 @@ export default function Overview() {
             <div className="text-sm font-semibold">{format(new Date(), 'MMMM')} targets</div>
             <Link to="/targets" className="text-xs text-blue-600 hover:underline">All targets</Link>
           </div>
-          {!targets.data?.targets.length ? <Empty>No team targets set for this month.</Empty> : (
+          {targets.isLoading ? <div className="text-sm text-slate-500">Loading…</div> : !targets.data?.targets.length ? <Empty>No team targets set for this month.</Empty> : (
             <div className="space-y-3">
               {targets.data.targets.map((t) => {
                 const v = targetProgress(t, targets.data!.data)

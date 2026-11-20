@@ -1,7 +1,27 @@
 project_id = "baitcamp-dashboard"
 
+# Local development ports (offset from the defaults so this can run next to another local project).
+[api]
+port = 55421
+[db]
+port = 55422
+shadow_port = 55420
+[db.pooler]
+port = 55429
+[studio]
+port = 55423
+[local_smtp]
+port = 55424
+[analytics]
+enabled = false
+
 [auth]
 enable_signup = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+
+[auth.email]
+enable_confirmations = false
 
 # Each function checks the caller itself (signed-in user or scheduler secret).
 [functions.sync-gumroad]

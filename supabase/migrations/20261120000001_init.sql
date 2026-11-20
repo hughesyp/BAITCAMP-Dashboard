@@ -350,3 +350,16 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from profiles);
 $$;
 grant execute on function public.has_users() to anon, authenticated;
+
+-- ---------- grants ----------
+-- New Supabase projects do not grant table access by default. Signed-in users get table
+-- privileges here and row-level security above decides which rows; anon gets nothing.
+grant usage on schema public to anon, authenticated, service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+grant execute on function public.is_admin() to authenticated, service_role;
+grant execute on function public.is_active_user() to authenticated, service_role;
+grant execute on function public.revenue_share_statement(uuid) to authenticated;
+revoke execute on function public.revenue_share_statement(uuid) from anon, public;
+revoke execute on function public.handle_new_user() from anon, authenticated, public;

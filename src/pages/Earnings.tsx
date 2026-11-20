@@ -63,7 +63,7 @@ export default function Earnings() {
       </PageHeader>
       <ErrorNote error={error ?? statement.error ?? people.error} />
 
-      {!who ? <Empty>Nobody has a revenue share set yet. Set one on the Team page.</Empty> : Number(who.rev_share_pct) === 0 ? <Empty>No revenue share is set on this account.</Empty> : (
+      {(isAdmin && people.isLoading) || statement.isLoading ? <div className="text-sm text-slate-500">Loading…</div> : !who ? <Empty>Nobody has a revenue share set yet. Set one on the Team page.</Empty> : Number(who.rev_share_pct) === 0 ? <Empty>No revenue share is set on this account.</Empty> : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat label="Earned to date" value={money(earned)} />

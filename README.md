@@ -165,7 +165,7 @@ Before committing, run `npm run build`; it type-checks the whole front end.
 The app was tested end to end against a local Supabase with sample data: sign-up, invites, permissions, drafts, uploads, charts and revenue share maths. As of the initial build, the code that calls external services had **not** been run against live accounts, so treat these as unverified until checked:
 
 - Gumroad sale field names in `sync-gumroad` (written without access to the API docs; the raw response is kept in `sales.raw` to help).
-- Meta metric names in `sync-social`. Meta retires metrics periodically; each is fetched separately so one failure doesn't block the rest, and failures show in the sync log.
+- Meta metric names in `sync-social`. Facebook reach now uses `page_total_media_view_unique` (unique viewers of Page content), the replacement Meta names for the retired reach metric. Meta retires metrics periodically; each is fetched separately so one failure doesn't block the rest, and failures show in the sync log.
 - Blotato per-post analytics matching in `sync-posts` (response shape taken from the docs).
 
 Not built: Google Analytics, Google Search Console, and account-level (follower) stats for Threads, X and TikTok. Per-post stats for those three do come through Blotato.

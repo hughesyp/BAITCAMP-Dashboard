@@ -25,21 +25,32 @@ async function syncMeta(db: any, days: number, rows: Row[], notes: string[]) {
   const { pageId, igUserId } = await getSetting<{ pageId?: string; igUserId?: string }>(db, "meta");
 
   if (pageId) {
+    // Page insights only accept a Page token. If the stored token is a user token, swap it
+    // for the Page's own token here (a Page token simply returns itself).
+    let pageToken = token;
     try {
-      const page = await getJson(`${base}/${pageId}?fields=followers_count,fan_count&access_token=${token}`);
+      const p = await getJson(`${base}/${pageId}?fields=access_token&access_token=${token}`);
+      if (p.access_token) pageToken = p.access_token;
+      else notes.push("facebook: could not get a Page token; the login that made the token may not have full access to this Page");
+    } catch (e) { notes.push(`facebook page token: ${(e as Error).message}`); }
+
+    try {
+      const page = await getJson(`${base}/${pageId}?fields=followers_count,fan_count&access_token=${pageToken}`);
       rows.push({ platform: "facebook", date: today, metric: "followers", value: page.followers_count ?? page.fan_count ?? 0 });
     } catch (e) { notes.push(`facebook followers: ${(e as Error).message}`); }
 
     // Each metric is requested separately so one retired metric name can't break the rest.
     const fbMetrics: Record<string, string> = {
-      page_impressions_unique: "reach",
+      // Meta retired page_impressions_unique / page_impressions; these are the named replacements.
+      page_total_media_view_unique: "reach",
+      page_media_view: "impressions",
       page_post_engagements: "engagement",
       page_views_total: "profile_views",
       page_daily_follows_unique: "new_followers",
     };
     for (const [apiName, metric] of Object.entries(fbMetrics)) {
       try {
-        const d = await getJson(`${base}/${pageId}/insights?metric=${apiName}&period=day&since=${since}&until=${until}&access_token=${token}`);
+        const d = await getJson(`${base}/${pageId}/insights?metric=${apiName}&period=day&since=${since}&until=${until}&access_token=${pageToken}`);
         for (const v of d.data?.[0]?.values ?? []) {
           // end_time marks the end of the day measured
           const date = day(new Date(new Date(v.end_time).getTime() - 86400000));

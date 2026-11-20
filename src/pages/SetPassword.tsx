@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { ErrorNote } from '../components/ui'
 import { useAuth } from '../lib/auth'
+import logo from '../assets/logo.png'
 import { supabase } from '../lib/supabase'
 
 /** Shown after following an invite or password-reset email link. */
@@ -22,7 +23,10 @@ export default function SetPassword() {
 
   return (
     <div className="mx-auto mt-20 max-w-sm px-4">
-      <div className="mb-6 text-center text-2xl font-bold tracking-tight">BAITCAMP</div>
+      <div className="mb-6 flex flex-col items-center gap-3">
+        <img src={logo} alt="" width={32} height={32} className="h-12 w-12 rounded-xl" />
+        <div className="text-2xl font-extrabold tracking-tight text-ink">BAITCAMP</div>
+      </div>
       <form onSubmit={submit} className="card space-y-3">
         <h1 className="text-base font-semibold">Choose your password</h1>
         <div>

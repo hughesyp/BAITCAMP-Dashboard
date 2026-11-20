@@ -69,7 +69,7 @@ export default function Posts() {
       </div>
 
       {posts.isLoading ? <div className="text-sm text-slate-500">Loading…</div> : rows.length === 0 ? (
-        <Empty>No posts yet for this filter. <Link to="/compose" className="text-blue-600 hover:underline">Create the first one.</Link></Empty>
+        <Empty>No posts yet for this filter. <Link to="/compose" className="text-brand-600 hover:text-link-hover hover:underline">Create the first one.</Link></Empty>
       ) : (
         <div className="card overflow-x-auto p-0">
           <table className="w-full">
@@ -99,8 +99,8 @@ export default function Posts() {
                     <td className="td">{cell('likes', 'reactions')}</td>
                     <td className="td">{cell('comments')}</td>
                     <td className="td whitespace-nowrap text-xs">
-                      {t.public_url && <a href={t.public_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View</a>}
-                      {mine && ['draft', 'failed'].includes(t.status) && <Link to={`/compose?id=${post.id}`} className="ml-2 text-blue-600 hover:underline">{t.status === 'failed' ? 'Fix & retry' : 'Edit'}</Link>}
+                      {t.public_url && <a href={t.public_url} target="_blank" rel="noreferrer" className="text-brand-600 hover:text-link-hover hover:underline">View</a>}
+                      {mine && ['draft', 'failed'].includes(t.status) && <Link to={`/compose?id=${post.id}`} className="ml-2 text-brand-600 hover:text-link-hover hover:underline">{t.status === 'failed' ? 'Fix & retry' : 'Edit'}</Link>}
                       {mine && post.status === 'draft' && <button className="ml-2 text-red-700 hover:underline" onClick={() => remove(post.id)}>Delete</button>}
                     </td>
                   </tr>

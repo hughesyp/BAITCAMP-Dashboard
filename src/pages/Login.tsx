@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ErrorNote, Notice } from '../components/ui'
+import logo from '../assets/logo.png'
 import { supabase } from '../lib/supabase'
 
 export default function Login() {
@@ -39,7 +40,10 @@ export default function Login() {
 
   return (
     <div className="mx-auto mt-20 max-w-sm px-4">
-      <div className="mb-6 text-center text-2xl font-bold tracking-tight">BAITCAMP</div>
+      <div className="mb-6 flex flex-col items-center gap-3">
+        <img src={logo} alt="" width={32} height={32} className="h-12 w-12 rounded-xl" />
+        <div className="text-2xl font-extrabold tracking-tight text-ink">BAITCAMP</div>
+      </div>
       <form onSubmit={submit} className="card space-y-3">
         <h1 className="text-base font-semibold">{firstRun ? 'Create the admin account' : 'Sign in'}</h1>
         {firstRun && <p className="text-xs text-slate-500">No accounts exist yet. The first account becomes the admin.</p>}
@@ -60,7 +64,7 @@ export default function Login() {
         <ErrorNote error={error} />
         {notice && <Notice>{notice}</Notice>}
         <button className="btn btn-primary w-full" disabled={busy}>{busy ? 'Please wait…' : firstRun ? 'Create account' : 'Sign in'}</button>
-        {!firstRun && <button type="button" className="w-full text-center text-xs text-blue-600 hover:underline" onClick={forgot}>Forgot password?</button>}
+        {!firstRun && <button type="button" className="w-full text-center text-xs text-brand-600 hover:text-link-hover hover:underline" onClick={forgot}>Forgot password?</button>}
       </form>
     </div>
   )

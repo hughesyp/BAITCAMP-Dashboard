@@ -39,7 +39,7 @@ export function Progress({ value, target }: { value: number; target: number }) {
   const pct = target > 0 ? Math.min(100, (value / target) * 100) : 0
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-      <div className={`h-full rounded-full ${pct >= 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+      <div className={`h-full rounded-full ${pct >= 100 ? 'bg-green-500' : 'bg-brand-500'}`} style={{ width: `${pct}%` }} />
     </div>
   )
 }
@@ -47,7 +47,7 @@ export function Progress({ value, target }: { value: number; target: number }) {
 const STATUS_STYLES: Record<string, string> = {
   published: 'bg-green-100 text-green-800',
   done: 'bg-green-100 text-green-800',
-  scheduled: 'bg-blue-100 text-blue-800',
+  scheduled: 'bg-sky-100 text-sky-800',
   queued: 'bg-amber-100 text-amber-800',
   'in-progress': 'bg-amber-100 text-amber-800',
   doing: 'bg-amber-100 text-amber-800',
@@ -65,7 +65,7 @@ export function RangePicker({ value, onChange }: { value: number; onChange: (n: 
   return (
     <div className="flex overflow-hidden rounded-md border border-slate-300 bg-white text-sm">
       {[7, 30, 90].map((d) => (
-        <button key={d} onClick={() => onChange(d)} className={`px-3 py-1.5 ${value === d ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
+        <button key={d} onClick={() => onChange(d)} className={`px-3 py-1.5 ${value === d ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
           {d} days
         </button>
       ))}

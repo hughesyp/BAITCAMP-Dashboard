@@ -200,7 +200,7 @@ export default function Compose() {
               <div className="flex flex-wrap gap-2">
                 {PLATFORMS.map((p) => (
                   <button key={p.id} onClick={() => toggle(p.id)} aria-pressed={selected.includes(p.id)}
-                    className={`rounded-md border px-3 py-1.5 text-sm ${selected.includes(p.id) ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700'}`}>
+                    className={`rounded-md border px-3 py-1.5 text-sm ${selected.includes(p.id) ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 bg-white text-slate-700'}`}>
                     {p.label}
                   </button>
                 ))}
@@ -213,7 +213,7 @@ export default function Compose() {
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold">{p.label}</div>
                 <div className="flex items-center gap-3 text-xs text-slate-500">
-                  {i === 0 && selected.length > 1 && <button className="text-blue-600 hover:underline" onClick={copyToAll}>Copy caption to all</button>}
+                  {i === 0 && selected.length > 1 && <button className="text-brand-600 hover:text-link-hover hover:underline" onClick={copyToAll}>Copy caption to all</button>}
                   <span>{copy[p.id].caption.length} chars</span>
                 </div>
               </div>

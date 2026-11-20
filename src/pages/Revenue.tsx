@@ -79,7 +79,7 @@ export default function Revenue() {
               <XAxis dataKey="date" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={30} />
               <YAxis tick={{ fontSize: 11 }} width={32} allowDecimals={false} />
               <Tooltip />
-              <Bar dataKey="sales" fill="#2563eb" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="sales" fill="#eb4f1e" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

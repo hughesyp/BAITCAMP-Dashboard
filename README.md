@@ -57,6 +57,7 @@ Two rules follow from this and should be kept:
 
 - Vite, React 19, TypeScript, React Router, TanStack Query for data fetching
 - Tailwind CSS v4 (small set of shared classes in `src/index.css`: `card`, `btn`, `input`, `label`, `th`, `td`)
+- Branding follows the Notion Branding page: Inter font (self-hosted via `@fontsource-variable/inter`) and the BAITCAMP palette as Tailwind colours in `src/index.css` (`brand-50`…`brand-900` around primary `#EB4F1E`, plus `ink`, `ink-2`, `link-hover`, `sky-brand`). Buttons and white-on-colour text use `brand-600` (`#C53C11`) for readable contrast. Logo: `src/assets/logo.png`; favicon: `public/favicon.png` and `public/favicon.ico`
 - Recharts for charts, date-fns for dates
 - Supabase: Postgres, Auth, Storage, Edge Functions (Deno/TypeScript)
 - Hosting: Azure Static Web Apps, deployed with a deployment token by the GitHub Action in `.github/workflows/deploy.yml` on every push to `main`, or manually with `npm run deploy` (the Static Web App is not linked to the repo; see SETUP.md section 7). `public/staticwebapp.config.json` handles client-side routing

@@ -21,7 +21,7 @@ const components: Components = {
   ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-6">{children}</ul>,
   ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-6">{children}</ol>,
   blockquote: ({ children }) => <blockquote className="my-3 rounded-md border-l-4 border-slate-300 bg-slate-50 px-4 py-1 text-slate-700">{children}</blockquote>,
-  a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className="text-blue-600 underline">{children}</a>,
+  a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className="text-ink underline decoration-brand-500 underline-offset-2 hover:text-link-hover">{children}</a>,
   hr: () => <hr className="my-5 border-slate-200" />,
   table: ({ children }) => <div className="my-3 overflow-x-auto"><table className="w-full border-collapse text-sm">{children}</table></div>,
   th: ({ children }) => <th className="border border-slate-200 bg-slate-50 px-3 py-1.5 text-left font-semibold">{children}</th>,
@@ -67,7 +67,7 @@ export default function Brand() {
           <div className="mb-4 flex flex-wrap gap-2" role="tablist">
             {pages.map((x) => (
               <button key={x.id} role="tab" aria-selected={selected === x.id} onClick={() => setSelected(x.id)}
-                className={`rounded-md border px-3 py-1.5 text-sm ${selected === x.id ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}>
+                className={`rounded-md border px-3 py-1.5 text-sm ${selected === x.id ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}>
                 {x.icon ? `${x.icon} ` : ''}{x.title}
               </button>
             ))}
@@ -80,7 +80,7 @@ export default function Brand() {
                   <h1 className="text-xl font-semibold">{p.icon ? `${p.icon} ` : ''}{p.title}</h1>
                   <div className="text-xs text-slate-500">
                     {p.last_edited_at && `Updated ${format(new Date(p.last_edited_at), 'd MMM yyyy')}`}
-                    {p.url && <> · <a href={p.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Edit in Notion</a></>}
+                    {p.url && <> · <a href={p.url} target="_blank" rel="noreferrer" className="text-brand-600 hover:text-link-hover hover:underline">Edit in Notion</a></>}
                   </div>
                 </div>
                 <div className="text-sm text-slate-800">

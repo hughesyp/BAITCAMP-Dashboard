@@ -96,7 +96,7 @@ export default function Earnings() {
                       {isAdmin && (
                         <td className="td text-xs">
                           {isPaid ? <button className="text-red-700 hover:underline" onClick={() => undo(r)}>Undo</button>
-                            : !current && Number(r.share_cents) > 0 && <button className="text-blue-600 hover:underline" onClick={() => markPaid(r)}>Mark as paid</button>}
+                            : !current && Number(r.share_cents) > 0 && <button className="text-brand-600 hover:text-link-hover hover:underline" onClick={() => markPaid(r)}>Mark as paid</button>}
                         </td>
                       )}
                     </tr>

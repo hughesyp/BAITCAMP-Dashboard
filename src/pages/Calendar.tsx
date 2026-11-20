@@ -7,7 +7,7 @@ import { loadPosts, postDate, teamName, useTeam } from '../lib/data'
 import { platformLabel } from '../lib/util'
 
 const DOT: Record<string, string> = {
-  published: 'bg-green-500', scheduled: 'bg-blue-500', queued: 'bg-amber-500', partial: 'bg-amber-500', failed: 'bg-red-500', draft: 'bg-slate-400',
+  published: 'bg-green-500', scheduled: 'bg-sky-brand', queued: 'bg-amber-500', partial: 'bg-amber-500', failed: 'bg-red-500', draft: 'bg-slate-400',
 }
 
 export default function Calendar() {
@@ -36,7 +36,7 @@ export default function Calendar() {
             const items = (posts.data ?? []).filter((p) => isSameDay(new Date(postDate(p)), d))
             return (
               <div key={d.toISOString()} className={`min-h-24 p-1.5 ${isSameMonth(d, month) ? 'bg-white' : 'bg-slate-50'}`}>
-                <div className={`mb-1 text-xs ${isSameDay(d, new Date()) ? 'font-bold text-blue-600' : 'text-slate-500'}`}>{format(d, 'd')}</div>
+                <div className={`mb-1 text-xs ${isSameDay(d, new Date()) ? 'font-bold text-brand-600' : 'text-slate-500'}`}>{format(d, 'd')}</div>
                 <div className="space-y-1">
                   {items.map((p) => (
                     <Link key={p.id} to={p.status === 'draft' ? `/compose?id=${p.id}` : '/posts'}

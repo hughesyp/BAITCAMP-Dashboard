@@ -68,13 +68,13 @@ export default function Media() {
                   {isVideo(a.public_url) ? <video src={a.public_url} className="h-full w-full object-cover" controls preload="metadata" /> : <img src={a.public_url} alt={a.file_name} loading="lazy" className="h-full w-full object-cover" />}
                 </div>
                 <div className="mt-2 truncate text-xs font-medium" title={a.file_name}>{a.file_name}</div>
-                {a.is_brand_asset && <div className="text-xs text-blue-700">Brand asset</div>}
+                {a.is_brand_asset && <div className="text-xs text-brand-700">Brand asset</div>}
                 <input className="input mt-1 px-2 py-1 text-xs" placeholder="tags, comma separated" defaultValue={a.tags.join(', ')} disabled={!mine} aria-label={`Tags for ${a.file_name}`}
                   onBlur={(e) => { const tags = e.target.value.split(',').map((t) => t.trim()).filter(Boolean); if (tags.join() !== a.tags.join()) update(a, { tags }) }} />
                 <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                  <Link to={`/compose?media=${encodeURIComponent(a.public_url)}`} className="text-blue-600 hover:underline">Use in post</Link>
-                  <a href={a.public_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Open</a>
-                  {isAdmin && <button className="text-blue-600 hover:underline" onClick={() => update(a, { is_brand_asset: !a.is_brand_asset })}>{a.is_brand_asset ? 'Unmark brand' : 'Mark brand'}</button>}
+                  <Link to={`/compose?media=${encodeURIComponent(a.public_url)}`} className="text-brand-600 hover:text-link-hover hover:underline">Use in post</Link>
+                  <a href={a.public_url} target="_blank" rel="noreferrer" className="text-brand-600 hover:text-link-hover hover:underline">Open</a>
+                  {isAdmin && <button className="text-brand-600 hover:text-link-hover hover:underline" onClick={() => update(a, { is_brand_asset: !a.is_brand_asset })}>{a.is_brand_asset ? 'Unmark brand' : 'Mark brand'}</button>}
                   {mine && <button className="text-red-700 hover:underline" onClick={() => remove(a)}>Delete</button>}
                 </div>
               </div>

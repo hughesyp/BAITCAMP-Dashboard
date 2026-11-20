@@ -94,9 +94,9 @@ export default function Ideas() {
                     </div>
                     <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                       {COLUMNS.filter((c) => c.id !== i.status).map((c) => (
-                        <button key={c.id} className="text-blue-600 hover:underline" onClick={() => move(i, c.id)}>Move to {c.label.toLowerCase()}</button>
+                        <button key={c.id} className="text-brand-600 hover:text-link-hover hover:underline" onClick={() => move(i, c.id)}>Move to {c.label.toLowerCase()}</button>
                       ))}
-                      <Link className="text-blue-600 hover:underline" to={`/compose?idea=${encodeURIComponent(i.title + (i.body ? '\n' + i.body : ''))}`}>Create post</Link>
+                      <Link className="text-brand-600 hover:text-link-hover hover:underline" to={`/compose?idea=${encodeURIComponent(i.title + (i.body ? '\n' + i.body : ''))}`}>Create post</Link>
                       {(isAdmin || i.created_by === profile?.id) && <button className="text-red-700 hover:underline" onClick={() => remove(i)}>Delete</button>}
                     </div>
                   </div>

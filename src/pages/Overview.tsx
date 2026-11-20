@@ -76,7 +76,7 @@ export default function Overview() {
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={30} />
                 <YAxis tick={{ fontSize: 11 }} width={48} tickFormatter={(v) => '$' + v} />
                 <Tooltip formatter={(v) => ['$' + Number(v).toFixed(2), 'Net revenue']} />
-                <Area type="monotone" dataKey="revenue" stroke="#2563eb" fill="#dbeafe" strokeWidth={2} />
+                <Area type="monotone" dataKey="revenue" stroke="#eb4f1e" fill="#fbe1d7" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -85,7 +85,7 @@ export default function Overview() {
         <div className="card">
           <div className="mb-2 flex items-center justify-between">
             <div className="text-sm font-semibold">What's driving sales</div>
-            <Link to="/revenue" className="text-xs text-blue-600 hover:underline">All sources</Link>
+            <Link to="/revenue" className="text-xs text-brand-600 hover:text-link-hover hover:underline">All sources</Link>
           </div>
           {topSources.length === 0 ? <Empty>No sales in this period yet.</Empty> : (
             <div className="space-y-2.5">
@@ -96,7 +96,7 @@ export default function Overview() {
                     <span className="text-slate-600">{money(v.net)} · {v.sales}</span>
                   </div>
                   <div className="mt-1 h-1.5 rounded-full bg-slate-100">
-                    <div className="h-full rounded-full bg-blue-500" style={{ width: `${(v.net / maxSource) * 100}%` }} />
+                    <div className="h-full rounded-full bg-brand-500" style={{ width: `${(v.net / maxSource) * 100}%` }} />
                   </div>
                 </div>
               ))}
@@ -138,7 +138,7 @@ export default function Overview() {
         <div className="card">
           <div className="mb-2 flex items-center justify-between">
             <div className="text-sm font-semibold">{format(new Date(), 'MMMM')} targets</div>
-            <Link to="/targets" className="text-xs text-blue-600 hover:underline">All targets</Link>
+            <Link to="/targets" className="text-xs text-brand-600 hover:text-link-hover hover:underline">All targets</Link>
           </div>
           {targets.isLoading ? <div className="text-sm text-slate-500">Loading…</div> : !targets.data?.targets.length ? <Empty>No team targets set for this month.</Empty> : (
             <div className="space-y-3">

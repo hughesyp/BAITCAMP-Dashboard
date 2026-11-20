@@ -2,9 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Empty, ErrorNote, PageHeader, Progress, RangePicker, Stat } from '../components/ui'
 import { loadMonthData, TARGET_KINDS, targetProgress, useMetrics, usePosts, useSales, type Target } from '../lib/data'
+import { rate, rateNumber, useSentCampaigns } from '../lib/email'
 import { supabase } from '../lib/supabase'
 import { lastDays, latestFollowers, money, monthStart, num, PLATFORMS, platformLabel, saleCounts, saleNet, sumMetric } from '../lib/util'
 
@@ -45,6 +46,27 @@ export default function Overview() {
   const topSources = [...sources].sort((a, b) => b[1].net - a[1].net).slice(0, 6)
   const maxSource = topSources[0]?.[1].net || 1
 
+  // Email (MailerLite)
+  const sent = useSentCampaigns(days)
+  const em = m.filter((r) => r.platform === 'mailerlite')
+  const subs = em.filter((r) => r.metric === 'subscribers').sort((a, b) => b.date.localeCompare(a.date))[0]
+  const emailSum = (metric: string) => em.filter((r) => r.metric === metric).reduce((a, r) => a + Number(r.value), 0)
+  const gained = emailSum('new_subscribers')
+  const lost = emailSum('unsubscribes')
+  const emailByDay = new Map(lastDays(days).map((d) => [d, { gained: 0, lost: 0 }]))
+  for (const r of em) {
+    const d = emailByDay.get(r.date)
+    if (d && r.metric === 'new_subscribers') d.gained = Number(r.value)
+    if (d && r.metric === 'unsubscribes') d.lost = -Number(r.value)
+  }
+  const emailChart = [...emailByDay].map(([date, v]) => ({ date: format(new Date(date + 'T00:00:00'), 'd MMM'), Gained: v.gained, Lost: v.lost }))
+  const campaigns = sent.data ?? []
+  const avgRate = (key: string) => {
+    const vals = campaigns.map((c) => rateNumber(c.stats?.[key])).filter((v): v is number => v !== null)
+    return vals.length ? `${(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)}%` : '–'
+  }
+  const lastCampaign = campaigns[0]
+
   const platforms = PLATFORMS.filter((p) => m.some((r) => r.platform === p.id))
   const followerChange = (platform: string) => {
     const rows = m.filter((r) => r.platform === platform && r.metric === 'followers').sort((a, b) => a.date.localeCompare(b.date))
@@ -58,8 +80,10 @@ export default function Overview() {
       </PageHeader>
       <ErrorNote error={sales.error ?? metrics.error ?? posts.error} />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <Stat label="Net revenue" value={money(net)} hint="After Gumroad fees and refunds" />
+        <Stat label="Email subscribers" value={subs ? num(Number(subs.value)) : '–'}
+          hint={subs ? `${gained - lost >= 0 ? '+' : ''}${num(gained - lost)} net in ${days} days` : 'Connect MailerLite in Settings'} />
         <Stat label="Sales" value={num(count)} />
         <Stat label="Followers" value={num(latestFollowers(m))} hint="All connected platforms" />
         <Stat label="Reach" value={num(sumMetric(m, 'reach'))} />
@@ -106,7 +130,75 @@ export default function Overview() {
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <div className="card overflow-x-auto lg:col-span-2">
+        <div className="card lg:col-span-2">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="text-sm font-semibold">Email</div>
+            <Link to="/email" className="text-xs text-brand-600 hover:text-link-hover hover:underline">Email stats</Link>
+          </div>
+          {!em.length && !campaigns.length ? (
+            <Empty>No email stats yet. They appear after the first sync once MailerLite is connected in Settings.</Empty>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  ['New subscribers', num(gained)],
+                  ['Unsubscribes', num(lost)],
+                  ['Avg open rate', avgRate('open_rate')],
+                  ['Avg click rate', avgRate('click_rate')],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <div className="text-xs text-slate-500">{label}</div>
+                    <div className="text-lg font-semibold">{value}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 h-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={emailChart} stackOffset="sign" margin={{ left: 0, right: 8, top: 4, bottom: 0 }}>
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" minTickGap={40} />
+                    <YAxis tick={{ fontSize: 10 }} width={28} allowDecimals={false} />
+                    <Tooltip formatter={(v, name) => [Math.abs(Number(v)), name === 'Lost' ? 'Unsubscribed' : 'New subscribers']} />
+                    <Bar dataKey="Gained" stackId="s" fill="#eb4f1e" />
+                    <Bar dataKey="Lost" stackId="s" fill="#94a3b8" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-2 border-t border-slate-100 pt-2 text-xs text-slate-600">
+                {lastCampaign ? (
+                  <>Last campaign: <span className="font-medium text-ink">{lastCampaign.subject || lastCampaign.name}</span>
+                    {lastCampaign.sent_at && ` · ${format(new Date(lastCampaign.sent_at), 'd MMM')}`} · {rate(lastCampaign.stats?.open_rate)} opened · {rate(lastCampaign.stats?.click_rate)} clicked</>
+                ) : `No campaigns sent in the last ${days} days.`}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="text-sm font-semibold">{format(new Date(), 'MMMM')} targets</div>
+            <Link to="/targets" className="text-xs text-brand-600 hover:text-link-hover hover:underline">All targets</Link>
+          </div>
+          {targets.isLoading ? <div className="text-sm text-slate-500">Loading…</div> : !targets.data?.targets.length ? <Empty>No team targets set for this month.</Empty> : (
+            <div className="space-y-3">
+              {targets.data.targets.map((t) => {
+                const v = targetProgress(t, targets.data!.data)
+                return (
+                  <div key={t.id}>
+                    <div className="mb-1 flex justify-between text-sm">
+                      <span>{TARGET_KINDS[t.kind]}{t.platform ? ` · ${platformLabel(t.platform)}` : ''}</span>
+                      <span className="text-slate-600">{num(v)} / {num(t.target_value)}</span>
+                    </div>
+                    <Progress value={v} target={t.target_value} />
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="card overflow-x-auto">
           <div className="mb-2 text-sm font-semibold">Social accounts</div>
           {platforms.length === 0 ? (
             <Empty>No social stats yet. They appear after the first sync once Facebook and Instagram are connected in Settings.</Empty>
@@ -132,29 +224,6 @@ export default function Overview() {
                 })}
               </tbody>
             </table>
-          )}
-        </div>
-
-        <div className="card">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="text-sm font-semibold">{format(new Date(), 'MMMM')} targets</div>
-            <Link to="/targets" className="text-xs text-brand-600 hover:text-link-hover hover:underline">All targets</Link>
-          </div>
-          {targets.isLoading ? <div className="text-sm text-slate-500">Loading…</div> : !targets.data?.targets.length ? <Empty>No team targets set for this month.</Empty> : (
-            <div className="space-y-3">
-              {targets.data.targets.map((t) => {
-                const v = targetProgress(t, targets.data!.data)
-                return (
-                  <div key={t.id}>
-                    <div className="mb-1 flex justify-between text-sm">
-                      <span>{TARGET_KINDS[t.kind]}{t.platform ? ` · ${platformLabel(t.platform)}` : ''}</span>
-                      <span className="text-slate-600">{num(v)} / {num(t.target_value)}</span>
-                    </div>
-                    <Progress value={v} target={t.target_value} />
-                  </div>
-                )
-              })}
-            </div>
           )}
         </div>
       </div>

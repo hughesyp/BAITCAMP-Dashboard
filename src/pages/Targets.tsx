@@ -1,14 +1,17 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { addMonths, format } from 'date-fns'
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { Empty, ErrorNote, PageHeader, Progress } from '../components/ui'
 import { useAuth } from '../lib/auth'
 import { loadMonthData, TARGET_KINDS, targetProgress, teamName, useTeam, type Target } from '../lib/data'
 import { supabase } from '../lib/supabase'
 import { monthStart, num, PLATFORMS, platformLabel } from '../lib/util'
 
-export default function Targets() {
-  const { isAdmin } = useAuth()
+/** Everyone sees progress. With `manage` (admin-only route) targets can be added and deleted. */
+export default function Targets({ manage = false }: { manage?: boolean }) {
+  const { isAdmin: admin } = useAuth()
+  const isAdmin = manage && admin
   const qc = useQueryClient()
   const team = useTeam()
   const [date, setDate] = useState(new Date())
@@ -47,7 +50,8 @@ export default function Targets() {
 
   return (
     <div>
-      <PageHeader title="Targets" subtitle="Monthly goals and progress against them">
+      <PageHeader title={isAdmin ? 'Manage targets' : 'Targets'} subtitle={isAdmin ? 'Set the monthly goals everyone sees on Targets and Overview' : 'Monthly goals and progress against them'}>
+        {admin && !manage && <Link to="/admin/targets" className="btn">Manage targets</Link>}
         <button className="btn" onClick={() => setDate(addMonths(date, -1))} aria-label="Previous month">←</button>
         <div className="w-36 text-center text-sm font-semibold">{format(date, 'MMMM yyyy')}</div>
         <button className="btn" onClick={() => setDate(addMonths(date, 1))} aria-label="Next month">→</button>

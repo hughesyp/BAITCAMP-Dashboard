@@ -57,6 +57,7 @@ export default function App() {
         <Route path="ideas" element={<Ideas />} />
         <Route path="brand" element={<Brand />} />
         <Route path="earnings" element={<Earnings />} />
+        {isAdmin && <Route path="admin/targets" element={<Targets manage />} />}
         {isAdmin && <Route path="team" element={<Team />} />}
         {isAdmin && <Route path="settings" element={<Settings />} />}
         <Route path="*" element={<Navigate to="/" replace />} />

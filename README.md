@@ -14,7 +14,8 @@ This README is the handover document for a developer picking the project up. For
 | Create post | `/compose` | Upload media, choose platforms, write a caption and first comment per platform, publish now or schedule. Includes the AI caption writer |
 | Calendar | `/calendar` | Month view of draft, scheduled and published posts |
 | Media library | `/media` | Shared images and videos, with tags and a "brand asset" flag |
-| Targets | `/targets` | Monthly targets (revenue, sales, posts, followers, reach, engagement) with live progress |
+| Targets | `/targets` | Monthly targets (revenue, sales, posts, followers, reach, engagement) with live progress. Read-only for everyone |
+| Manage targets (admin) | `/admin/targets` | Add and delete targets |
 | Ideas & tasks | `/ideas` | Simple three-column board; an idea can be turned into a post |
 | Brand guide | `/brand` | Read-only view of the Notion pages (ideal customers, brand voice, branding), fetched live. Also fed to the AI writer. Edited only in Notion |
 | Revenue share | `/earnings` | Monthly statement of a marketer's share; the admin records payouts here |

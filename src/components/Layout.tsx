@@ -30,6 +30,7 @@ const GROUPS: Group[] = [
     title: 'Admin',
     adminOnly: true,
     items: [
+      { to: '/admin/targets', label: 'Manage targets' },
       { to: '/team', label: 'Team' },
       { to: '/settings', label: 'Settings' },
     ],

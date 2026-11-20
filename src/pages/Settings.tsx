@@ -14,6 +14,7 @@ const SECRETS = [
   { key: 'meta', label: 'Facebook + Instagram', secret: 'META_ACCESS_TOKEN' },
   { key: 'openrouter', label: 'OpenRouter (AI)', secret: 'OPENROUTER_API_KEY' },
   { key: 'notion', label: 'Notion (brand guide)', secret: 'NOTION_API_KEY' },
+  { key: 'mailerlite', label: 'MailerLite', secret: 'MAILERLITE_API_KEY' },
   { key: 'cron', label: 'Scheduler', secret: 'CRON_SECRET' },
 ]
 
@@ -27,6 +28,7 @@ export default function Settings() {
   const [meta, setMeta] = useState({ pageId: '', igUserId: '' })
   const [notionPages, setNotionPages] = useState('')
   const [models, setModels] = useState('')
+  const [sender, setSender] = useState({ from: '', from_name: '', reply_to: '' })
 
   const status = useQuery({ queryKey: ['integration-status'], queryFn: () => callFn<Record<string, boolean>>('integrations', { action: 'status' }), retry: false })
   const settings = useQuery({
@@ -47,6 +49,7 @@ export default function Settings() {
     setMapping(settings.data.blotato ?? {})
     setMeta({ pageId: '', igUserId: '', ...(settings.data.meta ?? {}) })
     setNotionPages((settings.data.notion?.pages ?? []).join('\n'))
+    setSender({ from: '', from_name: '', reply_to: '', ...(settings.data.mailerlite ?? {}) })
   }, [settings.data])
 
   const brand = useQuery({
@@ -168,6 +171,25 @@ export default function Settings() {
         </div>
       </div>
 
+      <div className="card mt-4 space-y-3">
+        <div className="text-sm font-semibold">MailerLite sender (used for drafts from the dashboard)</div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label className="label" htmlFor="mlFrom">From email (must be verified in MailerLite)</label>
+            <input id="mlFrom" type="email" className="input" value={sender.from} onChange={(e) => setSender({ ...sender, from: e.target.value.trim() })} />
+          </div>
+          <div>
+            <label className="label" htmlFor="mlName">From name</label>
+            <input id="mlName" className="input" value={sender.from_name} onChange={(e) => setSender({ ...sender, from_name: e.target.value })} placeholder="e.g. Phil from BAITCAMP" />
+          </div>
+          <div>
+            <label className="label" htmlFor="mlReply">Reply-to (optional, must be verified)</label>
+            <input id="mlReply" type="email" className="input" value={sender.reply_to} onChange={(e) => setSender({ ...sender, reply_to: e.target.value.trim() })} />
+          </div>
+        </div>
+        <button className="btn btn-primary" onClick={() => saveSetting('mailerlite', { from: sender.from, from_name: sender.from_name.trim(), ...(sender.reply_to ? { reply_to: sender.reply_to } : {}) })}>Save</button>
+      </div>
+
       <div className="card mt-4">
         <div className="mb-2 text-sm font-semibold">Sync now</div>
         <div className="flex flex-wrap gap-2">
@@ -175,6 +197,7 @@ export default function Settings() {
           <button className="btn" disabled={!!busy} onClick={() => run('gf', () => callFn('sync-gumroad', { days: 3650 }), syncNote)}>{busy === 'gf' ? 'Syncing…' : 'Gumroad (all history)'}</button>
           <button className="btn" disabled={!!busy} onClick={() => run('s', () => callFn('sync-social', { days: 30 }), syncNote)}>{busy === 's' ? 'Syncing…' : 'Social stats (30 days)'}</button>
           <button className="btn" disabled={!!busy} onClick={() => run('p', () => callFn('sync-posts'), syncNote)}>{busy === 'p' ? 'Syncing…' : 'Post status + stats'}</button>
+          <button className="btn" disabled={!!busy} onClick={() => run('ml', () => callFn('sync-mailerlite', { days: 90 }), syncNote)}>{busy === 'ml' ? 'Syncing…' : 'MailerLite (90 days)'}</button>
         </div>
         <div className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Recent syncs</div>
         <div className="mt-1 divide-y divide-slate-100">

@@ -57,8 +57,8 @@ const STATUS_STYLES: Record<string, string> = {
   todo: 'bg-slate-100 text-slate-700',
 }
 
-export function Badge({ status }: { status: string }) {
-  return <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status] ?? 'bg-slate-100 text-slate-700'}`}>{status}</span>
+export function Badge({ status, label }: { status: string; label?: string }) {
+  return <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status] ?? 'bg-slate-100 text-slate-700'}`}>{label ?? status}</span>
 }
 
 export function RangePicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {

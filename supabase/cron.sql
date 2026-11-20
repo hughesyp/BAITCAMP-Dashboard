@@ -25,3 +25,10 @@ select cron.schedule('sync-posts-15min', '*/15 * * * *', $$
     headers := '{"Content-Type":"application/json","x-cron-secret":"YOUR_CRON_SECRET"}'::jsonb,
     body := '{}'::jsonb);
 $$);
+
+select cron.schedule('sync-mailerlite-6h', '40 */6 * * *', $$
+  select net.http_post(
+    url := 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/sync-mailerlite',
+    headers := '{"Content-Type":"application/json","x-cron-secret":"YOUR_CRON_SECRET"}'::jsonb,
+    body := '{"days":2}'::jsonb);
+$$);

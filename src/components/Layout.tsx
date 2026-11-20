@@ -25,6 +25,13 @@ const GROUPS: Group[] = [
       { to: '/brand', label: 'Brand guide' },
     ],
   },
+  {
+    title: 'Email',
+    items: [
+      { to: '/email', label: 'Email stats' },
+      { to: '/email/drafts', label: 'Email drafts' },
+    ],
+  },
   { title: 'Earnings', items: [{ to: '/earnings', label: 'Revenue share' }] },
   {
     title: 'Admin',
@@ -66,7 +73,7 @@ export default function Layout() {
           {groups.map((g) => (
             <div key={g.title ?? 'top'} className="flex gap-1 md:mb-3 md:block md:space-y-0.5">
               {g.title && <div className="hidden px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:block">{g.title}</div>}
-              {g.items.map((n) => <NavLink key={n.to} to={n.to} end={n.to === '/'} className={itemClass}>{n.label}</NavLink>)}
+              {g.items.map((n) => <NavLink key={n.to} to={n.to} end={n.to === '/' || n.to === '/email'} className={itemClass}>{n.label}</NavLink>)}
             </div>
           ))}
         </nav>

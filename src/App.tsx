@@ -6,6 +6,9 @@ import Brand from './pages/Brand'
 import Calendar from './pages/Calendar'
 import Compose from './pages/Compose'
 import Earnings from './pages/Earnings'
+import Email from './pages/Email'
+import EmailDrafts from './pages/EmailDrafts'
+import EmailEditor from './pages/EmailEditor'
 import Ideas from './pages/Ideas'
 import Login from './pages/Login'
 import Media from './pages/Media'
@@ -56,6 +59,9 @@ export default function App() {
         <Route path="targets" element={<Targets />} />
         <Route path="ideas" element={<Ideas />} />
         <Route path="brand" element={<Brand />} />
+        <Route path="email" element={<Email />} />
+        <Route path="email/drafts" element={<EmailDrafts />} />
+        <Route path="email/drafts/:id" element={<EmailEditor />} />
         <Route path="earnings" element={<Earnings />} />
         {isAdmin && <Route path="admin/targets" element={<Targets manage />} />}
         {isAdmin && <Route path="team" element={<Team />} />}

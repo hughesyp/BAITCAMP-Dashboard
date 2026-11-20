@@ -25,6 +25,7 @@ supabase secrets set GUMROAD_ACCESS_TOKEN=...   # Gumroad → Settings → Advan
 supabase secrets set BLOTATO_API_KEY=...        # Blotato → Settings → API (keep any trailing = characters)
 supabase secrets set OPENROUTER_API_KEY=...     # openrouter.ai/keys
 supabase secrets set NOTION_API_KEY=...         # see section 6b
+supabase secrets set MAILERLITE_API_KEY=...     # see section 6c
 supabase secrets set CRON_SECRET=...            # any long random string, used by the scheduler
 supabase secrets set META_ACCESS_TOKEN=...      # see section 6
 ```
@@ -52,7 +53,7 @@ Open the address it prints. Because no accounts exist yet, the login page offers
 
 ## 5. Scheduled syncs
 
-Open `supabase/cron.sql`, replace `YOUR_PROJECT_REF` and `YOUR_CRON_SECRET`, and run it once in the Supabase SQL editor. It schedules Gumroad hourly, social stats daily, and post status/stats every 15 minutes.
+Open `supabase/cron.sql`, replace `YOUR_PROJECT_REF` and `YOUR_CRON_SECRET`, and run it once in the Supabase SQL editor. It schedules Gumroad hourly, social stats daily, post status/stats every 15 minutes, and MailerLite every 6 hours. If you already ran it before, run only the new `sync-mailerlite-6h` block at the end.
 
 ## 6. Facebook + Instagram stats (Meta)
 
@@ -79,6 +80,26 @@ supabase secrets set NOTION_API_KEY=your-integration-secret
 4. In the dashboard open **Brand guide**. If a page shows "not found", it hasn't been shared with the integration yet.
 
 To show different or extra pages, paste their Notion links (one per line) into **Settings → Brand guide pages**. Only the pages listed there can be viewed through the dashboard, even if the integration can see more.
+
+## 6c. MailerLite
+
+Email stats (subscribers, growth, campaign results) and email drafting.
+
+1. In MailerLite go to **Integrations → MailerLite API** (dashboard.mailerlite.com/integrations/api) → **Generate new token**. It's shown once. The key belongs to the MailerLite user who made it and stops working if that user is removed.
+2. Set it (don't paste it into chat):
+
+```powershell
+supabase secrets set MAILERLITE_API_KEY=your-token
+```
+
+3. In the dashboard, **Settings → MailerLite sender**: enter the from email (it must already be verified in MailerLite) and from name.
+4. **Settings → Sync now → MailerLite (90 days)** for the first load. After that the scheduled sync (section 5) runs every 6 hours.
+
+How drafting works: marketers write the email under **Email drafts** (with the AI writer) and press **Send to MailerLite as draft**. It appears in MailerLite as a draft campaign; nothing is sent until you send or schedule it there. Check the footer in MailerLite before sending (MailerLite may require your postal address).
+
+Plan limits: MailerLite only accepts email content through its API on some plans. If yours refuses it, the draft is still created (name, subject, sender, groups) and the dashboard says so; use **Copy email HTML** and paste it into the draft with MailerLite's custom HTML editor. MailerLite's API can't list or apply your saved templates, so dashboard emails use a built-in BAITCAMP layout instead.
+
+MailerLite doesn't keep a history of the subscriber total, so the "Active subscribers" figure builds up from the day it's connected. New subscribers and unsubscribes per day can be backfilled for 90 days.
 
 ## 7. Deploy to Azure Static Web Apps
 
@@ -149,5 +170,7 @@ This uses the values in `.env.production.local` (step 3). It deploys whatever is
 | Per-post stats | Blotato analytics | Facebook, Instagram, Threads, X, TikTok. Blotato refreshes them a limited number of times over 30 days depending on plan |
 | Publishing | Blotato API | First comment is native on Facebook and Instagram; on Threads and X it is posted as a reply; not available on TikTok |
 | Brand guide, AI writer's brand rules | Notion API | Read live and read-only; nothing stored |
+| Email subscribers, growth, campaign stats | MailerLite API | Synced every 6 hours |
+| Email drafts | Dashboard → MailerLite | Created as MailerLite drafts only; sending happens in MailerLite |
 
 Not built yet: Google Analytics, Search Console, and account-level (follower) stats for Threads, X and TikTok.

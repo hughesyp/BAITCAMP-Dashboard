@@ -14,6 +14,7 @@ serve(async (req, body, db) => {
       meta: has("META_ACCESS_TOKEN"),
       openrouter: has("OPENROUTER_API_KEY"),
       notion: has("NOTION_API_KEY"),
+      mailerlite: has("MAILERLITE_API_KEY"),
       cron: has("CRON_SECRET"),
     };
   }

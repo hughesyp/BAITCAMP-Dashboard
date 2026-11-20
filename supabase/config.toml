@@ -1,0 +1,20 @@
+project_id = "baitcamp-dashboard"
+
+[auth]
+enable_signup = true
+
+# Each function checks the caller itself (signed-in user or scheduler secret).
+[functions.sync-gumroad]
+verify_jwt = false
+[functions.sync-social]
+verify_jwt = false
+[functions.sync-posts]
+verify_jwt = false
+[functions.publish-post]
+verify_jwt = false
+[functions.integrations]
+verify_jwt = false
+[functions.ai-write]
+verify_jwt = false
+[functions.invite-user]
+verify_jwt = false

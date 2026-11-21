@@ -12,6 +12,7 @@ const GROUPS: Group[] = [
     title: 'Performance',
     items: [
       { to: '/revenue', label: 'Revenue & sources' },
+      { to: '/social', label: 'Social accounts' },
       { to: '/posts', label: 'Post performance' },
       { to: '/targets', label: 'Targets' },
     ],

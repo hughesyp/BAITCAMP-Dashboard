@@ -10,6 +10,7 @@ This README is the handover document for a developer picking the project up. For
 | --- | --- | --- |
 | Overview | `/` | Net revenue, email subscribers, sales, followers, reach and posts over 7/30/90 days; revenue per day; top sales sources; email summary (signups, unsubscribes, open/click rates, last campaign); this month's targets; social accounts |
 | Revenue & sources | `/revenue` | Gumroad sales by referrer source and by product, plus recent sales |
+| Social accounts | `/social` | Facebook/Instagram follower growth, reach, impressions, engagement rate vs the previous period, per-platform table, top posts |
 | Post performance | `/posts` | Every post sent through the dashboard, per platform, with status, link and stats; filter by person or platform |
 | Create post | `/compose` | Upload media, choose platforms, write a caption and first comment per platform, publish now or schedule. Includes the AI caption writer |
 | Calendar | `/calendar` | Month view of draft, scheduled and published posts |

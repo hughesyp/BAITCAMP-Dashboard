@@ -17,6 +17,7 @@ import Posts from './pages/Posts'
 import Revenue from './pages/Revenue'
 import SetPassword from './pages/SetPassword'
 import Settings from './pages/Settings'
+import Social from './pages/Social'
 import Targets from './pages/Targets'
 import Team from './pages/Team'
 
@@ -53,6 +54,7 @@ export default function App() {
         <Route index element={<Overview />} />
         <Route path="revenue" element={<Revenue />} />
         <Route path="posts" element={<Posts />} />
+        <Route path="social" element={<Social />} />
         <Route path="compose" element={<Compose />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="media" element={<Media />} />

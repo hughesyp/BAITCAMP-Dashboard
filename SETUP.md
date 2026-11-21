@@ -108,7 +108,7 @@ TikTok post stats (views, likes, comments on posts published through the dashboa
 
 1. Go to developers.tiktok.com, log in, and open **Manage apps** → **Connect an app**. Fill in the app details (name, icon, category, description). TikTok asks for a terms of service and privacy policy URL; pages on baitcamp.net are fine.
 2. Platform: **Web**, website `https://dashboard.baitcamp.net`.
-3. Add products **Login Kit** and **Display API**. Turn on the scopes `user.info.basic`, `user.info.profile`, `user.info.stats` and `video.list`.
+3. Under **Products**, add **Login Kit** (there is no separate "Display API" product to add). Then open the **Scopes** section (left menu) → **Add scopes** and add `user.info.profile`, `user.info.stats` and `video.list`. `user.info.basic` is already there.
 4. In Login Kit, add the redirect URI exactly: `https://dashboard.baitcamp.net/settings/tiktok` (Settings → TikTok stats in the dashboard shows the exact address for the site you're on). TikTok only accepts https addresses, so connecting has to be done on the live site, not from a local copy.
 5. Choose how to run it:
    - **Sandbox (try this first):** in the app, create a **Sandbox**, then under target users add the BAITCAMP TikTok account (you log in to it there). A sandbox has its own client key and secret; use those. No review needed, but it only works for the accounts added as target users, which is all we need.

@@ -14,8 +14,8 @@ import { threads, threadsToken } from "./threads.ts";
 import { tiktok, tiktokToken } from "./tiktok.ts";
 
 const WINDOW_DAYS = 90;
-const MAX_POSTS = 100;   // per platform, newest first
-const MAX_PAGES = 5;     // when listing posts
+const MAX_POSTS = 500;   // per platform, newest first (enough for 90 days at several posts a day)
+const MAX_PAGES = 12;    // when listing posts (50 a page; TikTok gives 20 a page, so it gets more pages)
 const CONCURRENCY = 6;   // per-post stats requests at once, per platform
 const BUDGET_MS = 70_000;
 const FRESH_DAYS = 7;    // posts newer than this get per-post stats every run; older ones once a day
@@ -157,7 +157,7 @@ async function tiktokPosts(token: string, sinceSec: number): Promise<Found[]> {
   const out: Found[] = [];
   let cursor: number | undefined, done = false;
   const fields = "id,create_time,cover_image_url,share_url,title,video_description,view_count,like_count,comment_count,share_count";
-  for (let page = 0; page < MAX_PAGES && !done && out.length < MAX_POSTS; page++) {
+  for (let page = 0; page < MAX_PAGES * 2.5 && !done && out.length < MAX_POSTS; page++) {
     const d = await tiktok(token, `/v2/video/list/?fields=${fields}`, { method: "POST", body: JSON.stringify({ max_count: 20, ...(cursor ? { cursor } : {}) }) });
     for (const v of d.videos ?? []) {
       if (Number(v.create_time) < sinceSec) { done = true; break; } // newest first

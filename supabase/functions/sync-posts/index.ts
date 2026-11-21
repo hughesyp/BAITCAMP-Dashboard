@@ -91,9 +91,15 @@ serve(async (req, body, db) => {
     .order("ran_at", { ascending: false }).limit(1).maybeSingle();
   const age = last ? Date.now() - new Date(last.ran_at).getTime() : Infinity;
   if (age > (body.force ? 5 : 55) * 60_000) {
+    // Logged before starting, so a run cut off by the time limit still counts and isn't retried at once.
+    const { data: entry } = await db.from("sync_log")
+      .insert({ source: "account-posts", ok: false, message: "Started; if this message stays, the run was cut off by the time limit." })
+      .select("id").single();
     const accountNotes: string[] = [];
     accountPosts = await syncAccountPosts(db, accountNotes);
-    await logSync(db, "account-posts", accountNotes.length === 0, `${accountPosts} account posts. ${accountNotes.join(" | ")}`);
+    const message = `${accountPosts} account posts. ${accountNotes.join(" | ")}`.slice(0, 2000);
+    if (entry) await db.from("sync_log").update({ ok: accountNotes.length === 0, message }).eq("id", entry.id);
+    else await logSync(db, "account-posts", accountNotes.length === 0, message);
     notes.push(...accountNotes);
   }
   return { ok: notes.length === 0, statusUpdates, metricUpdates, accountPosts, notes };

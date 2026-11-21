@@ -14,6 +14,7 @@ const GROUPS: Group[] = [
       { to: '/revenue', label: 'Revenue & sources' },
       { to: '/social', label: 'Social accounts' },
       { to: '/posts', label: 'Post performance' },
+      { to: '/email', label: 'Email stats' },
       { to: '/targets', label: 'Targets' },
     ],
   },
@@ -21,16 +22,10 @@ const GROUPS: Group[] = [
     title: 'Content',
     items: [
       { to: '/calendar', label: 'Calendar' },
+      { to: '/email/drafts', label: 'Email drafts' },
       { to: '/ideas', label: 'Ideas & tasks' },
       { to: '/media', label: 'Media library' },
       { to: '/brand', label: 'Brand guide' },
-    ],
-  },
-  {
-    title: 'Email',
-    items: [
-      { to: '/email', label: 'Email stats' },
-      { to: '/email/drafts', label: 'Email drafts' },
     ],
   },
   { title: 'Earnings', items: [{ to: '/earnings', label: 'Revenue share' }] },

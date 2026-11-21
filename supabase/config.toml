@@ -46,3 +46,6 @@ verify_jwt = false
 verify_jwt = false
 [functions.sync-mailerlite]
 verify_jwt = false
+
+[functions.threads-auth]
+verify_jwt = false

@@ -16,6 +16,7 @@ serve(async (req, body, db) => {
       notion: has("NOTION_API_KEY"),
       mailerlite: has("MAILERLITE_API_KEY"),
       tiktok: has("TIKTOK_CLIENT_KEY") && has("TIKTOK_CLIENT_SECRET"),
+      threads: has("THREADS_APP_ID") && has("THREADS_APP_SECRET"),
       cron: has("CRON_SECRET"),
     };
   }

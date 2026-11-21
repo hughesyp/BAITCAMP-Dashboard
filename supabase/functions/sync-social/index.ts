@@ -1,10 +1,11 @@
-// Pulls account-level daily stats for Facebook, Instagram and TikTok into public.metrics_daily.
+// Pulls account-level daily stats for Facebook, Instagram, Threads and TikTok into public.metrics_daily.
 // Body: { days?: number } (default 3, max 90; TikTok has no history, so it always records today)
 //
 // Secret: META_ACCESS_TOKEN (long-lived Page token)
 // Settings (integration_settings): meta = { pageId, igUserId }
-// TikTok: connected in Settings (tokens in public.oauth_tokens), see _shared/tiktok.ts
+// TikTok and Threads: connected in Settings (tokens in public.oauth_tokens), see _shared/tiktok.ts and _shared/threads.ts
 import { getCaller, getSetting, logSync, requireAdminOrCron, serve } from "../_shared/common.ts";
+import { threads, threadsToken } from "../_shared/threads.ts";
 import { tiktok, tiktokToken } from "../_shared/tiktok.ts";
 
 type Row = { platform: string; date: string; metric: string; value: number };
@@ -97,6 +98,52 @@ async function syncMeta(db: any, days: number, rows: Row[], notes: string[]) {
   } else notes.push("instagram: no igUserId in settings, skipped");
 }
 
+// Threads gives daily profile views as a series, and likes/replies/reposts/quotes/link clicks as one
+// total per request, so those are asked for one day at a time. Followers is a current total only.
+async function syncThreads(db: any, days: number, rows: Row[], notes: string[]) {
+  let auth: Awaited<ReturnType<typeof threadsToken>>;
+  try {
+    auth = await threadsToken(db);
+  } catch (e) { notes.push(`threads: ${(e as Error).message}`); return; }
+  if (!auth) { notes.push("threads: not connected, skipped"); return; }
+  if (auth.note) notes.push(`threads: ${auth.note}`);
+  const { token, userId } = auth;
+  const today = day(new Date());
+
+  try {
+    const d = await threads(token, `/${userId}/threads_insights?metric=followers_count`);
+    const v = d.data?.[0]?.total_value?.value;
+    if (v !== undefined) rows.push({ platform: "threads", date: today, metric: "followers", value: Number(v) || 0 });
+  } catch (e) { notes.push(`threads followers: ${(e as Error).message}`); }
+
+  const since = Math.floor((Date.now() - days * 86400000) / 1000);
+  const until = Math.floor(Date.now() / 1000);
+  try {
+    const d = await threads(token, `/${userId}/threads_insights?metric=views&since=${since}&until=${until}`);
+    for (const v of d.data?.[0]?.values ?? []) {
+      // end_time marks the end of the day measured (same as Facebook)
+      const date = day(new Date(new Date(v.end_time).getTime() - 86400000));
+      rows.push({ platform: "threads", date, metric: "profile_views", value: Number(v.value) || 0 });
+    }
+  } catch (e) { notes.push(`threads views: ${(e as Error).message}`); }
+
+  for (let i = 1; i <= days; i++) {
+    const start = new Date(Date.now() - i * 86400000);
+    start.setUTCHours(0, 0, 0, 0);
+    const s = Math.floor(start.getTime() / 1000);
+    try {
+      const d = await threads(token, `/${userId}/threads_insights?metric=likes,replies,reposts,quotes,clicks&since=${s}&until=${s + 86400}`);
+      let engagement = 0, clicks = 0, seen = false;
+      for (const m of d.data ?? []) {
+        if (m.name === "clicks") clicks += (m.link_total_values ?? []).reduce((a: number, l: any) => a + (Number(l.value) || 0), 0);
+        else if (m.total_value) { engagement += Number(m.total_value.value) || 0; seen = true; }
+      }
+      if (seen) rows.push({ platform: "threads", date: day(start), metric: "engagement", value: engagement });
+      rows.push({ platform: "threads", date: day(start), metric: "clicks", value: clicks });
+    } catch (e) { notes.push(`threads totals ${day(start)}: ${(e as Error).message}`); break; }
+  }
+}
+
 // TikTok only gives running totals (followers, and views/likes per video), not daily figures.
 // Each sync saves today's totals; daily views ("impressions") and engagements are the change
 // since the previous saved total. Covers the 200 most recent public videos.
@@ -147,6 +194,7 @@ serve(async (req, body, db) => {
   const notes: string[] = [];
 
   await syncMeta(db, days, rows, notes);
+  await syncThreads(db, days, rows, notes);
   await syncTikTok(db, rows, notes);
 
   if (rows.length) {

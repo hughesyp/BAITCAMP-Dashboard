@@ -29,6 +29,7 @@ supabase secrets set MAILERLITE_API_KEY=...     # see section 6c
 supabase secrets set CRON_SECRET=...            # any long random string, used by the scheduler
 supabase secrets set META_ACCESS_TOKEN=...      # see section 6
 supabase secrets set TIKTOK_CLIENT_KEY=... TIKTOK_CLIENT_SECRET=...   # see section 6d
+supabase secrets set THREADS_APP_ID=... THREADS_APP_SECRET=...       # see section 6e
 ```
 
 ## 3. Run it locally
@@ -125,6 +126,30 @@ How the numbers work: TikTok's API gives running totals only (followers, and vie
 
 The sign-in renews itself every time the daily sync runs. If the sync stops for several months the sign-in expires, and Settings shows the date to reconnect by.
 
+## 6e. Threads stats
+
+Threads post stats already come from Blotato. This section adds **account** stats: followers, plus daily profile views, engagements (likes, replies, reposts and quotes on your posts) and link clicks. It's free.
+
+1. At developers.facebook.com → **My Apps** → **Create app**, choose the use case **Access the Threads API**. Meta may not let you add this use case to the Facebook app from section 6, so a separate app is fine.
+2. In the new app open **Use cases** → **Access the Threads API** → **Customize**:
+   - **Permissions**: add `threads_manage_insights` (`threads_basic` is already there).
+   - **Settings**: under **Redirect Callback URLs** add exactly `https://dashboard.baitcamp.net/settings/threads` (Settings → Threads stats in the dashboard shows the exact address). Meta also asks for uninstall and delete callback URLs; `https://dashboard.baitcamp.net` is fine for both. Connecting has to be done on the live site, as Meta only accepts https addresses.
+   - On the same Settings screen, copy the **Threads app ID** and **Threads app secret**. These are different from the app's main App ID.
+3. **App roles** → **Roles** → **Add people** → **Threads Tester**, and add the BAITCAMP Threads account. Then accept the invite in Threads: open the Threads app or threads.com as that account → **Settings** → **Account** → **Website permissions** → **Invites**. While the app is in development mode only tester accounts can connect, which is all we need, so no app review is required.
+4. Set the ID and secret (don't paste them into chat):
+
+```powershell
+supabase secrets set THREADS_APP_ID=your-threads-app-id THREADS_APP_SECRET=your-threads-app-secret
+```
+
+5. In the dashboard, **Settings → Threads stats → Connect Threads**, sign in as the BAITCAMP Threads account and allow access. Then **Sync now → Social stats**.
+
+How the numbers work: Threads reports profile views, likes, replies, reposts, quotes and link clicks per day, but no reach or impressions. Followers is a current total only, so follower growth builds up from the day it's connected.
+
+The sign-in lasts 60 days and renews itself with each daily sync. If renewing fails, the sync keeps working until the date shown in Settings; reconnect before then.
+
+**X (Twitter):** X charges for API access, so X stats aren't pulled in. Enter the profile address in **Settings → X (Twitter) profile** and the Social accounts page links to it.
+
 ## 7. Deploy to Azure Static Web Apps
 
 The site is uploaded to Azure with a deployment token: automatically by a GitHub Action on every push to `main`, or manually from your computer. The Static Web App itself is not connected to the repo.
@@ -192,10 +217,11 @@ This uses the values in `.env.production.local` (step 3). It deploys whatever is
 | Revenue, sales, sources | Gumroad API | Source is the referrer Gumroad records for each sale |
 | Facebook / Instagram account stats | Meta Graph API | Daily followers, reach, engagement |
 | TikTok account stats | TikTok Display API | Followers; daily views and engagements worked out from running totals |
+| Threads account stats | Threads API (Meta) | Followers; daily profile views, engagements and link clicks |
 | Per-post stats | Blotato analytics | Facebook, Instagram, Threads, X, TikTok. Blotato refreshes them a limited number of times over 30 days depending on plan |
 | Publishing | Blotato API | First comment is native on Facebook and Instagram; on Threads and X it is posted as a reply; not available on TikTok |
 | Brand guide, AI writer's brand rules | Notion API | Read live and read-only; nothing stored |
 | Email subscribers, growth, campaign stats | MailerLite API | Synced every 6 hours |
 | Email drafts | Dashboard → MailerLite | Created as MailerLite drafts only; sending happens in MailerLite |
 
-Not built yet: Google Analytics, Search Console, and account-level (follower) stats for Threads and X.
+Not built yet: Google Analytics, Search Console, and account-level stats for X (the Social accounts page links to the X profile instead).

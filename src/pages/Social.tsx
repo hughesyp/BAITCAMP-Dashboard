@@ -1,9 +1,11 @@
 import { format, subDays } from 'date-fns'
+import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Bar, CartesianGrid, ComposedChart, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Empty, ErrorNote, PageHeader, RangePicker, Stat } from '../components/ui'
 import { useMetrics, usePosts } from '../lib/data'
+import { supabase } from '../lib/supabase'
 import { lastDays, num, PLATFORMS, platformLabel, ymd, type Metric } from '../lib/util'
 
 const pick = (m: Record<string, number> | null, ...keys: string[]) => {
@@ -39,6 +41,11 @@ export default function Social() {
   // Load twice the range so each figure can be compared with the period before it.
   const metrics = useMetrics(days * 2)
   const posts = usePosts(days)
+  const links = useQuery({
+    queryKey: ['profile-links'],
+    queryFn: async () => ((await supabase.from('brand_settings').select('profile_links').eq('id', 1).single()).data?.profile_links ?? {}) as Record<string, string>,
+  })
+  const xProfile = links.data?.twitter
 
   const cutoff = ymd(subDays(new Date(), days - 1))
   const social = (metrics.data ?? []).filter((r) => r.platform !== 'mailerlite')
@@ -91,6 +98,11 @@ export default function Social() {
         <RangePicker value={days} onChange={setDays} />
       </PageHeader>
       <ErrorNote error={metrics.error ?? posts.error} />
+      {xProfile && (
+        <p className="mb-3 text-sm text-slate-600">
+          X stats aren't tracked here. <a href={xProfile} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">Open the X profile ↗</a>
+        </p>
+      )}
 
       {available.length > 1 && (
         <div className="mb-4 flex flex-wrap gap-2">
@@ -104,7 +116,7 @@ export default function Social() {
       )}
 
       {metrics.isLoading ? <div className="text-sm text-slate-500">Loading…</div> : available.length === 0 ? (
-        <Empty>No social stats yet. They appear after the first sync once Facebook, Instagram or TikTok is connected in Settings.</Empty>
+        <Empty>No social stats yet. They appear after the first sync once Facebook, Instagram, Threads or TikTok is connected in Settings.</Empty>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
@@ -112,10 +124,12 @@ export default function Social() {
               hint={f.known ? `${f.change >= 0 ? '+' : ''}${num(f.change)} in ${days} days` : 'Growth shows after a second daily sync'} />
             <Stat label="Follower growth" value={f.known && f.first ? `${((f.change / f.first) * 100).toFixed(1)}%` : '–'}
               hint={fPrev.known ? `${fPrev.change >= 0 ? '+' : ''}${num(fPrev.change)} in the previous ${days} days` : undefined} />
-            {platform === 'tiktok'
-              ? <Stat label="Reach" value="–" hint="TikTok doesn't report reach" />
+            {platform === 'tiktok' || platform === 'threads'
+              ? <Stat label="Reach" value="–" hint={`${platformLabel(platform)} doesn't report reach`} />
               : <Stat label="Reach" value={num(sum(cur, 'reach'))} hint={change(sum(cur, 'reach'), sum(prev, 'reach'), days)} />}
-            <Stat label={platform === 'tiktok' ? 'Video views' : 'Impressions'} value={num(sum(cur, 'impressions'))} hint={change(sum(cur, 'impressions'), sum(prev, 'impressions'), days)} />
+            {platform === 'threads'
+              ? <Stat label="Profile views" value={num(sum(cur, 'profile_views'))} hint={change(sum(cur, 'profile_views'), sum(prev, 'profile_views'), days) ?? "Threads doesn't report impressions"} />
+              : <Stat label={platform === 'tiktok' ? 'Video views' : 'Impressions'} value={num(sum(cur, 'impressions'))} hint={change(sum(cur, 'impressions'), sum(prev, 'impressions'), days)} />}
             <Stat label="Engagements" value={num(sum(cur, 'engagement'))} hint={change(sum(cur, 'engagement'), sum(prev, 'engagement'), days)} />
             <Stat label="Engagement rate" value={pct(rate)}
               hint={rate !== null && ratePrev !== null ? `${pct(ratePrev)} in the previous ${days} days` : 'Engagements ÷ reach'} />
@@ -221,8 +235,9 @@ export default function Social() {
           </div>
 
           <p className="mt-3 text-xs text-slate-500">
-            Account stats come from Meta (Facebook, Instagram) and TikTok and refresh daily. TikTok only reports running totals, so its daily views and engagements are the change since the previous day's sync, and it has no reach figure. Post stats come from Blotato.
-            Instagram and TikTok don't report new follows per day, so that column shows “–” for them.
+            Account stats come from Meta (Facebook, Instagram, Threads) and TikTok and refresh daily. TikTok only reports running totals, so its daily views and engagements are the change since the previous day's sync, and it has no reach figure.
+            Threads reports profile views, likes, replies, reposts, quotes and link clicks, but not reach or impressions. Post stats come from Blotato.
+            Instagram, Threads and TikTok don't report new follows per day, so that column shows “–” for them.
           </p>
         </>
       )}

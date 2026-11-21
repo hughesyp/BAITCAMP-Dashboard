@@ -16,7 +16,7 @@ import Overview from './pages/Overview'
 import Posts from './pages/Posts'
 import Revenue from './pages/Revenue'
 import SetPassword from './pages/SetPassword'
-import Settings, { TikTokCallback } from './pages/Settings'
+import Settings, { ThreadsCallback, TikTokCallback } from './pages/Settings'
 import Social from './pages/Social'
 import Targets from './pages/Targets'
 import Team from './pages/Team'
@@ -69,6 +69,7 @@ export default function App() {
         {isAdmin && <Route path="team" element={<Team />} />}
         {isAdmin && <Route path="settings" element={<Settings />} />}
         {isAdmin && <Route path="settings/tiktok" element={<TikTokCallback />} />}
+        {isAdmin && <Route path="settings/threads" element={<ThreadsCallback />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

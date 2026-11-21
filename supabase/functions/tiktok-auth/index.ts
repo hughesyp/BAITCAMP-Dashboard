@@ -6,35 +6,8 @@
 //   { action: "disconnect" }
 // redirect_uri is <site>/settings/tiktok and must be registered exactly in the TikTok app.
 import { getCaller, HttpError, serve } from "../_shared/common.ts";
+import { checkRedirect, checkState, makeState } from "../_shared/oauth-state.ts";
 import { tiktok, TIKTOK_AUTH_URL, TIKTOK_SCOPES, tiktokKeys, tokenRequest, tokenRow } from "../_shared/tiktok.ts";
-
-const enc = new TextEncoder();
-const b64url = (buf: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-
-async function sign(text: string) {
-  const { secret } = tiktokKeys();
-  const k = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return b64url(await crypto.subtle.sign("HMAC", k, enc.encode(text)));
-}
-
-/** state = time.nonce.signature, tied to the admin who started the sign-in; valid for 15 minutes. */
-async function makeState(userId: string) {
-  const payload = `${Date.now()}.${crypto.randomUUID().replace(/-/g, "")}`;
-  return `${payload}.${await sign(`${payload}.${userId}`)}`;
-}
-async function checkState(state: string, userId: string) {
-  const [ts, nonce, sig] = String(state ?? "").split(".");
-  if (!ts || !nonce || !sig || sig !== await sign(`${ts}.${nonce}.${userId}`)) throw new HttpError(400, "The TikTok sign-in link is not valid. Start again from Settings.");
-  if (Date.now() - Number(ts) > 15 * 60_000) throw new HttpError(400, "The TikTok sign-in took too long. Start again from Settings.");
-}
-
-function checkRedirect(uri: unknown): string {
-  const u = String(uri ?? "");
-  if (!/^https:\/\/[^?#]+\/settings\/tiktok$/.test(u) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/settings\/tiktok$/.test(u)) {
-    throw new HttpError(400, "Invalid redirect address");
-  }
-  return u;
-}
 
 serve(async (req, body, db) => {
   const caller = await getCaller(req, db);
@@ -53,16 +26,16 @@ serve(async (req, body, db) => {
       client_key: key,
       response_type: "code",
       scope: TIKTOK_SCOPES,
-      redirect_uri: checkRedirect(body.redirect_uri),
-      state: await makeState(caller.id!),
+      redirect_uri: checkRedirect(body.redirect_uri, "tiktok"),
+      state: await makeState(tiktokKeys().secret, caller.id!),
     }).toString();
     return { url: url.toString() };
   }
 
   if (body.action === "exchange") {
-    await checkState(body.state, caller.id!);
+    await checkState(tiktokKeys().secret, body.state, caller.id!, "TikTok");
     if (!body.code) throw new HttpError(400, "No sign-in code from TikTok");
-    const t = await tokenRequest({ grant_type: "authorization_code", code: String(body.code), redirect_uri: checkRedirect(body.redirect_uri) });
+    const t = await tokenRequest({ grant_type: "authorization_code", code: String(body.code), redirect_uri: checkRedirect(body.redirect_uri, "tiktok") });
 
     // Check the scopes we need were granted (the user can untick them on TikTok's consent screen).
     const granted = String(t.scope ?? "").split(",").map((s) => s.trim());

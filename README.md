@@ -88,8 +88,9 @@ supabase/
   functions/
     _shared/common.ts   CORS, caller identification (user or scheduler), Blotato client, helpers
     sync-gumroad/       Pull sales from Gumroad into `sales`
-    sync-social/        Pull Facebook, Instagram and TikTok daily stats into `metrics_daily`
+    sync-social/        Pull Facebook, Instagram, Threads and TikTok daily stats into `metrics_daily`
     tiktok-auth/        Connect the TikTok account (OAuth); tokens in `oauth_tokens`, refreshed by `_shared/tiktok.ts`
+    threads-auth/       Connect the Threads account (OAuth); long-lived token in `oauth_tokens`, renewed by `_shared/threads.ts`
     sync-posts/         Update post status and per-post stats from Blotato
     publish-post/       Send a saved post to Blotato, one submission per platform
     ai-write/           Generate or rewrite captions via OpenRouter, following the Notion brand pages
@@ -109,7 +110,7 @@ supabase/
 | `profiles` | One row per user: role, start date, revenue share %, active | Trigger on sign-up; admin; `invite-user` |
 | `sales` | One row per Gumroad sale, with fee, refund flags, referrer and a normalised `source` | `sync-gumroad` |
 | `metrics_daily` | Account-level stats keyed by (platform, date, metric), e.g. followers, reach, engagement | `sync-social` |
-| `oauth_tokens` | Sign-in tokens for OAuth connections (TikTok). No browser access at all; only Edge Functions read it | `tiktok-auth`, `sync-social` |
+| `oauth_tokens` | Sign-in tokens for OAuth connections (TikTok, Threads). No browser access at all; only Edge Functions read it | `tiktok-auth`, `threads-auth`, `sync-social` |
 | `posts` | A post: author, media URLs, schedule time, overall status | Front end (author) |
 | `post_targets` | One row per platform for a post: caption, first comment, status, Blotato ids, public URL, stats | Front end for drafts; `publish-post` and `sync-posts` afterwards |
 | `media_assets` | Media library entries pointing at files in the `media` bucket | Front end |
@@ -129,7 +130,7 @@ Also: view `team` (names and roles only, so anyone can see who made a post witho
 
 **First comments.** Native on Facebook and Instagram. On Threads and X the first comment is sent as a reply in the thread. TikTok has none.
 
-**Stats.** `sync-gumroad` runs hourly and upserts sales by Gumroad sale id, so re-running is safe and refunds are picked up. `sync-social` runs daily and upserts Facebook, Instagram and TikTok numbers. TikTok only exposes running totals, so the sync stores `views_total` / `engagement_total` snapshots and writes the day-on-day change as `impressions` / `engagement`. The front end reads these tables directly and does the summing and charting client-side.
+**Stats.** `sync-gumroad` runs hourly and upserts sales by Gumroad sale id, so re-running is safe and refunds are picked up. `sync-social` runs daily and upserts Facebook, Instagram, Threads and TikTok numbers. Threads user-level `views` is profile views, so it is stored as `profile_views`; likes, replies, reposts and quotes are summed into `engagement`, and link clicks go in `clicks`. TikTok only exposes running totals, so the sync stores `views_total` / `engagement_total` snapshots and writes the day-on-day change as `impressions` / `engagement`. The front end reads these tables directly and does the summing and charting client-side.
 
 **Brand guide (Notion).** `notion-pages` reads the pages listed in `integration_settings` key `notion` straight from the Notion API on each request, converts the blocks to Markdown (`_shared/notion-md.ts`) and returns it; the front end renders it with react-markdown. Nothing is written to the database (there is a 60-second in-memory cache per function instance). Only listed pages can be requested, and the Notion link is returned to the admin only. The integration should have read-only capability.
 
@@ -187,4 +188,6 @@ The app was tested end to end against a local Supabase with sample data: sign-up
 - The Notion reader (`notion-pages`): the block-to-Markdown converter was unit-tested on sample blocks, but not against the live Notion API.
 - TikTok (`tiktok-auth`, TikTok part of `sync-social`): connecting and the first sync worked against the real account in sandbox mode (Nov 2026), so the token exchange, `user.info.stats` and `video.list` calls are confirmed. Still to confirm: token refresh after the first access token expires, and that the per-video counts (`view_count`, `like_count`, `comment_count`, `share_count`) are non-zero. If TikTok daily views stay at 0, check those field names first.
 
-Not built: Google Analytics, Google Search Console, and account-level (follower) stats for Threads and X. Per-post stats for those two do come through Blotato.
+- Threads (`threads-auth`, Threads part of `sync-social`): built from Meta's docs and tested only against a stand-in server. Unconfirmed: the response shape of `followers_count` and of the per-day totals, and whether a `views` value's `end_time` marks the end of the day (assumed, as for Facebook). If Threads profile views look shifted by a day, check that first.
+
+Not built: Google Analytics, Google Search Console, and account-level stats for X (X charges for API access; `brand_settings.profile_links.twitter`, set in Settings, puts a link to the profile on the Social accounts page). Per-post X stats do come through Blotato.

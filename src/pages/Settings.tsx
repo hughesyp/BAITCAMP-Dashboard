@@ -17,15 +17,19 @@ const SECRETS = [
   { key: 'notion', label: 'Notion (brand guide)', secret: 'NOTION_API_KEY' },
   { key: 'mailerlite', label: 'MailerLite', secret: 'MAILERLITE_API_KEY' },
   { key: 'tiktok', label: 'TikTok app', secret: 'TIKTOK_CLIENT_KEY + _SECRET' },
+  { key: 'threads', label: 'Threads app', secret: 'THREADS_APP_ID + _SECRET' },
   { key: 'cron', label: 'Scheduler', secret: 'CRON_SECRET' },
 ]
 
-const tiktokRedirect = () => `${window.location.origin}/settings/tiktok`
+const redirectFor = (path: string) => `${window.location.origin}/settings/${path}`
+const tiktokRedirect = () => redirectFor('tiktok')
+const threadsRedirect = () => redirectFor('threads')
 
 interface TikTokStatus { configured: boolean; connected: boolean; account_name?: string | null; refresh_expires_at?: string; updated_at?: string }
+interface ThreadsStatus { configured: boolean; connected: boolean; account_name?: string | null; expires_at?: string; updated_at?: string }
 
-/** TikTok sends the admin back here after they approve access. */
-export function TikTokCallback() {
+/** TikTok or Threads sends the admin back here after they approve access. */
+function ConnectCallback({ service, fn, path }: { service: string; fn: string; path: string }) {
   const nav = useNavigate()
   const qc = useQueryClient()
   const [error, setError] = useState<string | null>(null)
@@ -35,23 +39,26 @@ export function TikTokCallback() {
     if (started.current) return
     started.current = true
     const q = new URLSearchParams(window.location.search)
-    if (q.get('error')) { setError(`TikTok didn't connect: ${q.get('error_description') || q.get('error')}`); return }
-    callFn<{ account_name: string; missing_scopes: string[] }>('tiktok-auth', { action: 'exchange', code: q.get('code'), state: q.get('state'), redirect_uri: tiktokRedirect() })
+    if (q.get('error')) { setError(`${service} didn't connect: ${q.get('error_description') || q.get('error')}`); return }
+    callFn<{ account_name: string; missing_scopes: string[] }>(fn, { action: 'exchange', code: q.get('code'), state: q.get('state'), redirect_uri: redirectFor(path) })
       .then((r) => {
-        qc.invalidateQueries({ queryKey: ['tiktok-status'] })
+        qc.invalidateQueries({ queryKey: [`${path}-status`] })
         const warn = r.missing_scopes.length ? ` Some permissions weren't granted (${r.missing_scopes.join(', ')}), so some stats will be missing; reconnect and leave them ticked.` : ''
-        nav('/settings', { replace: true, state: { notice: `TikTok connected${r.account_name ? ` (${r.account_name})` : ''}.${warn}` } })
+        nav('/settings', { replace: true, state: { notice: `${service} connected${r.account_name ? ` (${r.account_name})` : ''}.${warn}` } })
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
-  }, [nav, qc])
+  }, [nav, qc, service, fn, path])
 
   return (
     <div className="card max-w-lg space-y-3">
-      <div className="text-sm font-semibold">Connecting TikTok</div>
+      <div className="text-sm font-semibold">Connecting {service}</div>
       {error ? <><ErrorNote error={error} /><Link to="/settings" className="btn">Back to Settings</Link></> : <div className="text-sm text-slate-500">Finishing the connection…</div>}
     </div>
   )
 }
+
+export const TikTokCallback = () => <ConnectCallback service="TikTok" fn="tiktok-auth" path="tiktok" />
+export const ThreadsCallback = () => <ConnectCallback service="Threads" fn="threads-auth" path="threads" />
 
 export default function Settings() {
   const qc = useQueryClient()
@@ -68,6 +75,16 @@ export default function Settings() {
     if (!window.confirm('Disconnect TikTok? Stats already collected are kept; new ones stop until you reconnect.')) return
     run('tiktok', () => callFn('tiktok-auth', { action: 'disconnect' }), () => 'TikTok disconnected.').then(() => qc.invalidateQueries({ queryKey: ['tiktok-status'] }))
   }
+  const threadsStatus = useQuery({ queryKey: ['threads-status'], queryFn: () => callFn<ThreadsStatus>('threads-auth', { action: 'status' }), retry: false })
+  const connectThreads = () => run('threads', async () => {
+    const { url } = await callFn<{ url: string }>('threads-auth', { action: 'start', redirect_uri: threadsRedirect() })
+    window.location.href = url
+  }, () => 'Opening Threads…')
+  const disconnectThreads = () => {
+    if (!window.confirm('Disconnect Threads? Stats already collected are kept; new ones stop until you reconnect.')) return
+    run('threads', () => callFn('threads-auth', { action: 'disconnect' }), () => 'Threads disconnected.').then(() => qc.invalidateQueries({ queryKey: ['threads-status'] }))
+  }
+  const [xProfile, setXProfile] = useState('')
   const [accounts, setAccounts] = useState<BlotatoAccount[] | null>(null)
   const [mapping, setMapping] = useState<Mapping>({})
   const [meta, setMeta] = useState({ pageId: '', igUserId: '' })
@@ -102,6 +119,22 @@ export default function Settings() {
     queryFn: async () => (await supabase.from('brand_settings').select('ai_models').eq('id', 1).single()).data?.ai_models as string[] | undefined,
   })
   useEffect(() => { if (brand.data) setModels(brand.data.join('\n')) }, [brand.data])
+  const links = useQuery({
+    queryKey: ['profile-links'],
+    queryFn: async () => ((await supabase.from('brand_settings').select('profile_links').eq('id', 1).single()).data?.profile_links ?? {}) as Record<string, string>,
+  })
+  useEffect(() => { if (links.data) setXProfile(links.data.twitter ?? '') }, [links.data])
+  const saveXProfile = () => run('x-profile', async () => {
+    let url = xProfile.trim()
+    if (url && !/^https?:\/\//.test(url)) url = `https://x.com/${url.replace(/^@/, '')}`
+    if (url && !/^https:\/\/(www\.)?(x|twitter)\.com\/[A-Za-z0-9_]+\/?$/.test(url)) throw new Error('Enter an X profile address like https://x.com/yourhandle, or just the handle')
+    const next = { ...(links.data ?? {}) }
+    if (url) next.twitter = url; else delete next.twitter
+    const { error } = await supabase.from('brand_settings').update({ profile_links: next, updated_at: new Date().toISOString() }).eq('id', 1)
+    if (error) throw new Error(error.message)
+    setXProfile(url)
+    qc.invalidateQueries({ queryKey: ['profile-links'] })
+  }, () => 'Saved.')
 
   const lines = (t: string) => t.split('\n').map((l) => l.trim()).filter(Boolean)
   const saveModels = () => run('models', async () => {
@@ -218,6 +251,40 @@ export default function Settings() {
               <p className="text-xs text-slate-500">Redirect URI registered in the TikTok app: <code className="break-all">{tiktokRedirect()}</code></p>
             </>
           )}
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="card max-w-xl space-y-3">
+          <div className="text-sm font-semibold">Threads stats</div>
+          {threadsStatus.isLoading ? <div className="text-sm text-slate-500">Loading…</div> : threadsStatus.error ? <ErrorNote error={threadsStatus.error} /> : !threadsStatus.data?.configured ? (
+            <p className="text-sm text-slate-600">Set <code>THREADS_APP_ID</code> and <code>THREADS_APP_SECRET</code> first (SETUP.md section 6e). In the Meta app's Threads settings, the redirect callback URL must be <code className="break-all">{threadsRedirect()}</code></p>
+          ) : (
+            <>
+              <p className="text-sm text-slate-600">
+                {threadsStatus.data.connected
+                  ? <>Connected{threadsStatus.data.account_name ? <> as <span className="font-medium text-ink">{threadsStatus.data.account_name}</span></> : ''}. The sign-in renews itself with each daily sync{threadsStatus.data.expires_at ? `; if syncing stops, reconnect before ${format(new Date(threadsStatus.data.expires_at), 'd MMM yyyy')}` : ''}.</>
+                  : 'Not connected. Sign in with the BAITCAMP Threads account and allow access to its profile and insights.'}
+              </p>
+              <div className="flex gap-2">
+                <button className="btn btn-primary" disabled={!!busy} onClick={connectThreads}>{busy === 'threads' ? 'Opening…' : threadsStatus.data.connected ? 'Reconnect Threads' : 'Connect Threads'}</button>
+                {threadsStatus.data.connected && <button className="btn" disabled={!!busy} onClick={disconnectThreads}>Disconnect</button>}
+              </div>
+              <p className="text-xs text-slate-500">Redirect callback URL registered in the Meta app: <code className="break-all">{threadsRedirect()}</code></p>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="card max-w-xl space-y-3">
+          <div className="text-sm font-semibold">X (Twitter) profile</div>
+          <p className="text-sm text-slate-600">X stats aren't pulled in, because X charges for API access. The Social accounts page links to the profile instead.</p>
+          <div>
+            <label className="label" htmlFor="xProfile">X profile address or handle</label>
+            <input id="xProfile" className="input" placeholder="https://x.com/yourhandle" value={xProfile} onChange={(e) => setXProfile(e.target.value)} />
+          </div>
+          <button className="btn btn-primary" disabled={busy === 'x-profile'} onClick={saveXProfile}>Save</button>
         </div>
       </div>
 

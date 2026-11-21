@@ -88,7 +88,8 @@ supabase/
   functions/
     _shared/common.ts   CORS, caller identification (user or scheduler), Blotato client, helpers
     sync-gumroad/       Pull sales from Gumroad into `sales`
-    sync-social/        Pull Facebook + Instagram daily stats into `metrics_daily`
+    sync-social/        Pull Facebook, Instagram and TikTok daily stats into `metrics_daily`
+    tiktok-auth/        Connect the TikTok account (OAuth); tokens in `oauth_tokens`, refreshed by `_shared/tiktok.ts`
     sync-posts/         Update post status and per-post stats from Blotato
     publish-post/       Send a saved post to Blotato, one submission per platform
     ai-write/           Generate or rewrite captions via OpenRouter, following the Notion brand pages
@@ -108,6 +109,7 @@ supabase/
 | `profiles` | One row per user: role, start date, revenue share %, active | Trigger on sign-up; admin; `invite-user` |
 | `sales` | One row per Gumroad sale, with fee, refund flags, referrer and a normalised `source` | `sync-gumroad` |
 | `metrics_daily` | Account-level stats keyed by (platform, date, metric), e.g. followers, reach, engagement | `sync-social` |
+| `oauth_tokens` | Sign-in tokens for OAuth connections (TikTok). No browser access at all; only Edge Functions read it | `tiktok-auth`, `sync-social` |
 | `posts` | A post: author, media URLs, schedule time, overall status | Front end (author) |
 | `post_targets` | One row per platform for a post: caption, first comment, status, Blotato ids, public URL, stats | Front end for drafts; `publish-post` and `sync-posts` afterwards |
 | `media_assets` | Media library entries pointing at files in the `media` bucket | Front end |
@@ -127,7 +129,7 @@ Also: view `team` (names and roles only, so anyone can see who made a post witho
 
 **First comments.** Native on Facebook and Instagram. On Threads and X the first comment is sent as a reply in the thread. TikTok has none.
 
-**Stats.** `sync-gumroad` runs hourly and upserts sales by Gumroad sale id, so re-running is safe and refunds are picked up. `sync-social` runs daily and upserts Facebook and Instagram numbers. The front end reads these tables directly and does the summing and charting client-side.
+**Stats.** `sync-gumroad` runs hourly and upserts sales by Gumroad sale id, so re-running is safe and refunds are picked up. `sync-social` runs daily and upserts Facebook, Instagram and TikTok numbers. TikTok only exposes running totals, so the sync stores `views_total` / `engagement_total` snapshots and writes the day-on-day change as `impressions` / `engagement`. The front end reads these tables directly and does the summing and charting client-side.
 
 **Brand guide (Notion).** `notion-pages` reads the pages listed in `integration_settings` key `notion` straight from the Notion API on each request, converts the blocks to Markdown (`_shared/notion-md.ts`) and returns it; the front end renders it with react-markdown. Nothing is written to the database (there is a 60-second in-memory cache per function instance). Only listed pages can be requested, and the Notion link is returned to the admin only. The integration should have read-only capability.
 
@@ -183,5 +185,6 @@ The app was tested end to end against a local Supabase with sample data: sign-up
 - Blotato per-post analytics matching in `sync-posts` (response shape taken from the docs).
 - MailerLite (`sync-mailerlite`, `mailerlite`): tested against a stand-in server built from MailerLite's API docs, not a real account. Check the first real sync and draft; in particular the campaign date fields and whether the plan accepts email content.
 - The Notion reader (`notion-pages`): the block-to-Markdown converter was unit-tested on sample blocks, but not against the live Notion API.
+- TikTok (`tiktok-auth`, TikTok part of `sync-social`): tested against a stand-in server. The token endpoint parameters and the video stat field names (`view_count`, `like_count`, `comment_count`, `share_count`) were not readable on TikTok's docs site at build time; check the first real connect and sync. It is also unconfirmed whether `user.info.stats` and `video.list` work in sandbox mode.
 
-Not built: Google Analytics, Google Search Console, and account-level (follower) stats for Threads, X and TikTok. Per-post stats for those three do come through Blotato.
+Not built: Google Analytics, Google Search Console, and account-level (follower) stats for Threads and X. Per-post stats for those two do come through Blotato.

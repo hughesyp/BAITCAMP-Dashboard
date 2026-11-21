@@ -1,9 +1,11 @@
-// Pulls account-level daily stats for Facebook and Instagram into public.metrics_daily.
-// Body: { days?: number } (default 3, max 90)
+// Pulls account-level daily stats for Facebook, Instagram and TikTok into public.metrics_daily.
+// Body: { days?: number } (default 3, max 90; TikTok has no history, so it always records today)
 //
 // Secret: META_ACCESS_TOKEN (long-lived Page token)
 // Settings (integration_settings): meta = { pageId, igUserId }
+// TikTok: connected in Settings (tokens in public.oauth_tokens), see _shared/tiktok.ts
 import { getCaller, getSetting, logSync, requireAdminOrCron, serve } from "../_shared/common.ts";
+import { tiktok, tiktokToken } from "../_shared/tiktok.ts";
 
 type Row = { platform: string; date: string; metric: string; value: number };
 const day = (d: Date) => d.toISOString().slice(0, 10);
@@ -95,6 +97,49 @@ async function syncMeta(db: any, days: number, rows: Row[], notes: string[]) {
   } else notes.push("instagram: no igUserId in settings, skipped");
 }
 
+// TikTok only gives running totals (followers, and views/likes per video), not daily figures.
+// Each sync saves today's totals; daily views ("impressions") and engagements are the change
+// since the previous saved total. Covers the 200 most recent public videos.
+async function syncTikTok(db: any, rows: Row[], notes: string[]) {
+  let token: string | null;
+  try {
+    token = await tiktokToken(db);
+  } catch (e) { notes.push(`tiktok: ${(e as Error).message}`); return; }
+  if (!token) { notes.push("tiktok: not connected, skipped"); return; }
+  const today = day(new Date());
+
+  try {
+    const d = await tiktok(token, "/v2/user/info/?fields=follower_count,following_count,likes_count,video_count");
+    const u = d.user ?? {};
+    rows.push({ platform: "tiktok", date: today, metric: "followers", value: Number(u.follower_count) || 0 });
+    rows.push({ platform: "tiktok", date: today, metric: "likes_total", value: Number(u.likes_count) || 0 });
+    rows.push({ platform: "tiktok", date: today, metric: "video_count", value: Number(u.video_count) || 0 });
+  } catch (e) { notes.push(`tiktok account: ${(e as Error).message}`); }
+
+  try {
+    let views = 0, engagement = 0, cursor: number | undefined, pages = 0;
+    do {
+      const d = await tiktok(token, "/v2/video/list/?fields=id,view_count,like_count,comment_count,share_count", {
+        method: "POST",
+        body: JSON.stringify({ max_count: 20, ...(cursor ? { cursor } : {}) }),
+      });
+      for (const v of d.videos ?? []) {
+        views += Number(v.view_count) || 0;
+        engagement += (Number(v.like_count) || 0) + (Number(v.comment_count) || 0) + (Number(v.share_count) || 0);
+      }
+      cursor = d.has_more ? d.cursor : undefined;
+    } while (cursor && ++pages < 10);
+
+    rows.push({ platform: "tiktok", date: today, metric: "views_total", value: views });
+    rows.push({ platform: "tiktok", date: today, metric: "engagement_total", value: engagement });
+    for (const [total, metric, cur] of [["views_total", "impressions", views], ["engagement_total", "engagement", engagement]] as const) {
+      const { data: prev } = await db.from("metrics_daily").select("value").eq("platform", "tiktok").eq("metric", total)
+        .lt("date", today).order("date", { ascending: false }).limit(1).maybeSingle();
+      if (prev) rows.push({ platform: "tiktok", date: today, metric, value: Math.max(0, cur - Number(prev.value)) });
+    }
+  } catch (e) { notes.push(`tiktok videos: ${(e as Error).message}`); }
+}
+
 serve(async (req, body, db) => {
   requireAdminOrCron(await getCaller(req, db));
   const days = Math.min(Math.max(Number(body.days) || 3, 1), 90);
@@ -102,6 +147,7 @@ serve(async (req, body, db) => {
   const notes: string[] = [];
 
   await syncMeta(db, days, rows, notes);
+  await syncTikTok(db, rows, notes);
 
   if (rows.length) {
     const stamped = rows.map((r) => ({ ...r, updated_at: new Date().toISOString() }));

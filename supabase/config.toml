@@ -42,5 +42,7 @@ verify_jwt = false
 verify_jwt = false
 [functions.mailerlite]
 verify_jwt = false
+[functions.tiktok-auth]
+verify_jwt = false
 [functions.sync-mailerlite]
 verify_jwt = false

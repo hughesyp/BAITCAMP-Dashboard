@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ErrorNote, Notice, PageHeader } from '../components/ui'
 import { callFn, supabase } from '../lib/supabase'
 import { PLATFORMS } from '../lib/util'
@@ -15,14 +16,58 @@ const SECRETS = [
   { key: 'openrouter', label: 'OpenRouter (AI)', secret: 'OPENROUTER_API_KEY' },
   { key: 'notion', label: 'Notion (brand guide)', secret: 'NOTION_API_KEY' },
   { key: 'mailerlite', label: 'MailerLite', secret: 'MAILERLITE_API_KEY' },
+  { key: 'tiktok', label: 'TikTok app', secret: 'TIKTOK_CLIENT_KEY + _SECRET' },
   { key: 'cron', label: 'Scheduler', secret: 'CRON_SECRET' },
 ]
+
+const tiktokRedirect = () => `${window.location.origin}/settings/tiktok`
+
+interface TikTokStatus { configured: boolean; connected: boolean; account_name?: string | null; refresh_expires_at?: string; updated_at?: string }
+
+/** TikTok sends the admin back here after they approve access. */
+export function TikTokCallback() {
+  const nav = useNavigate()
+  const qc = useQueryClient()
+  const [error, setError] = useState<string | null>(null)
+  const started = useRef(false)
+
+  useEffect(() => {
+    if (started.current) return
+    started.current = true
+    const q = new URLSearchParams(window.location.search)
+    if (q.get('error')) { setError(`TikTok didn't connect: ${q.get('error_description') || q.get('error')}`); return }
+    callFn<{ account_name: string; missing_scopes: string[] }>('tiktok-auth', { action: 'exchange', code: q.get('code'), state: q.get('state'), redirect_uri: tiktokRedirect() })
+      .then((r) => {
+        qc.invalidateQueries({ queryKey: ['tiktok-status'] })
+        const warn = r.missing_scopes.length ? ` Some permissions weren't granted (${r.missing_scopes.join(', ')}), so some stats will be missing; reconnect and leave them ticked.` : ''
+        nav('/settings', { replace: true, state: { notice: `TikTok connected${r.account_name ? ` (${r.account_name})` : ''}.${warn}` } })
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+  }, [nav, qc])
+
+  return (
+    <div className="card max-w-lg space-y-3">
+      <div className="text-sm font-semibold">Connecting TikTok</div>
+      {error ? <><ErrorNote error={error} /><Link to="/settings" className="btn">Back to Settings</Link></> : <div className="text-sm text-slate-500">Finishing the connection…</div>}
+    </div>
+  )
+}
 
 export default function Settings() {
   const qc = useQueryClient()
   const [error, setError] = useState<unknown>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const location = useLocation()
+  const [notice, setNotice] = useState<string | null>((location.state as { notice?: string } | null)?.notice ?? null)
   const [busy, setBusy] = useState('')
+  const tiktokStatus = useQuery({ queryKey: ['tiktok-status'], queryFn: () => callFn<TikTokStatus>('tiktok-auth', { action: 'status' }), retry: false })
+  const connectTikTok = () => run('tiktok', async () => {
+    const { url } = await callFn<{ url: string }>('tiktok-auth', { action: 'start', redirect_uri: tiktokRedirect() })
+    window.location.href = url
+  }, () => 'Opening TikTok…')
+  const disconnectTikTok = () => {
+    if (!window.confirm('Disconnect TikTok? Stats already collected are kept; new ones stop until you reconnect.')) return
+    run('tiktok', () => callFn('tiktok-auth', { action: 'disconnect' }), () => 'TikTok disconnected.').then(() => qc.invalidateQueries({ queryKey: ['tiktok-status'] }))
+  }
   const [accounts, setAccounts] = useState<BlotatoAccount[] | null>(null)
   const [mapping, setMapping] = useState<Mapping>({})
   const [meta, setMeta] = useState({ pageId: '', igUserId: '' })
@@ -151,6 +196,28 @@ export default function Settings() {
             <input id="igId" className="input" value={meta.igUserId} onChange={(e) => setMeta({ ...meta, igUserId: e.target.value.trim() })} />
           </div>
           <button className="btn btn-primary" onClick={() => saveSetting('meta', meta)}>Save</button>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="card max-w-xl space-y-3">
+          <div className="text-sm font-semibold">TikTok stats</div>
+          {tiktokStatus.isLoading ? <div className="text-sm text-slate-500">Loading…</div> : tiktokStatus.error ? <ErrorNote error={tiktokStatus.error} /> : !tiktokStatus.data?.configured ? (
+            <p className="text-sm text-slate-600">Set <code>TIKTOK_CLIENT_KEY</code> and <code>TIKTOK_CLIENT_SECRET</code> first (SETUP.md section 6d). In the TikTok app, the redirect URI must be <code className="break-all">{tiktokRedirect()}</code></p>
+          ) : (
+            <>
+              <p className="text-sm text-slate-600">
+                {tiktokStatus.data.connected
+                  ? <>Connected{tiktokStatus.data.account_name ? <> as <span className="font-medium text-ink">{tiktokStatus.data.account_name}</span></> : ''}. The sign-in renews itself with each daily sync{tiktokStatus.data.refresh_expires_at ? `; if syncing stops, reconnect before ${format(new Date(tiktokStatus.data.refresh_expires_at), 'd MMM yyyy')}` : ''}.</>
+                  : 'Not connected. Sign in with the BAITCAMP TikTok account and allow access to its profile, stats and videos.'}
+              </p>
+              <div className="flex gap-2">
+                <button className="btn btn-primary" disabled={!!busy} onClick={connectTikTok}>{busy === 'tiktok' ? 'Opening…' : tiktokStatus.data.connected ? 'Reconnect TikTok' : 'Connect TikTok'}</button>
+                {tiktokStatus.data.connected && <button className="btn" disabled={!!busy} onClick={disconnectTikTok}>Disconnect</button>}
+              </div>
+              <p className="text-xs text-slate-500">Redirect URI registered in the TikTok app: <code className="break-all">{tiktokRedirect()}</code></p>
+            </>
+          )}
         </div>
       </div>
 

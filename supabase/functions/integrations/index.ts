@@ -15,6 +15,7 @@ serve(async (req, body, db) => {
       openrouter: has("OPENROUTER_API_KEY"),
       notion: has("NOTION_API_KEY"),
       mailerlite: has("MAILERLITE_API_KEY"),
+      tiktok: has("TIKTOK_CLIENT_KEY") && has("TIKTOK_CLIENT_SECRET"),
       cron: has("CRON_SECRET"),
     };
   }

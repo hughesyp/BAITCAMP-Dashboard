@@ -28,6 +28,7 @@ supabase secrets set NOTION_API_KEY=...         # see section 6b
 supabase secrets set MAILERLITE_API_KEY=...     # see section 6c
 supabase secrets set CRON_SECRET=...            # any long random string, used by the scheduler
 supabase secrets set META_ACCESS_TOKEN=...      # see section 6
+supabase secrets set TIKTOK_CLIENT_KEY=... TIKTOK_CLIENT_SECRET=...   # see section 6d
 ```
 
 ## 3. Run it locally
@@ -101,6 +102,29 @@ Plan limits: MailerLite only accepts email content through its API on some plans
 
 MailerLite doesn't keep a history of the subscriber total, so the "Active subscribers" figure builds up from the day it's connected. New subscribers and unsubscribes per day can be backfilled for 90 days.
 
+## 6d. TikTok stats
+
+TikTok post stats (views, likes, comments on posts published through the dashboard) already come from Blotato. This section adds **account** stats: followers, plus daily views and engagements across all your public videos.
+
+1. Go to developers.tiktok.com, log in, and open **Manage apps** → **Connect an app**. Fill in the app details (name, icon, category, description). TikTok asks for a terms of service and privacy policy URL; pages on baitcamp.net are fine.
+2. Platform: **Web**, website `https://dashboard.baitcamp.net`.
+3. Add products **Login Kit** and **Display API**. Turn on the scopes `user.info.basic`, `user.info.profile`, `user.info.stats` and `video.list`.
+4. In Login Kit, add the redirect URI exactly: `https://dashboard.baitcamp.net/settings/tiktok` (Settings → TikTok stats in the dashboard shows the exact address for the site you're on). TikTok only accepts https addresses, so connecting has to be done on the live site, not from a local copy.
+5. Choose how to run it:
+   - **Sandbox (try this first):** in the app, create a **Sandbox**, then under target users add the BAITCAMP TikTok account (you log in to it there). A sandbox has its own client key and secret; use those. No review needed, but it only works for the accounts added as target users, which is all we need.
+   - **Production:** if TikTok won't give the stats permissions in sandbox, submit the app for review. Explain it's an internal dashboard that only reads the business's own TikTok account stats; a short screen recording of Settings → Connect TikTok helps.
+6. Copy the **Client key** and **Client secret** and set them (don't paste them into chat):
+
+```powershell
+supabase secrets set TIKTOK_CLIENT_KEY=your-client-key TIKTOK_CLIENT_SECRET=your-client-secret
+```
+
+7. In the dashboard, **Settings → TikTok stats → Connect TikTok**, sign in with the BAITCAMP TikTok account and allow everything it asks for. Then **Sync now → Social stats**.
+
+How the numbers work: TikTok's API gives running totals only (followers, and views/likes/comments/shares per video), not daily figures. The daily sync saves the totals each day and works out the day's views and engagements as the change since the day before, so TikTok figures start from the day it's connected and there's no backfill or reach figure. It covers your 200 most recent public videos.
+
+The sign-in renews itself every time the daily sync runs. If the sync stops for several months the sign-in expires, and Settings shows the date to reconnect by.
+
 ## 7. Deploy to Azure Static Web Apps
 
 The site is uploaded to Azure with a deployment token: automatically by a GitHub Action on every push to `main`, or manually from your computer. The Static Web App itself is not connected to the repo.
@@ -167,10 +191,11 @@ This uses the values in `.env.production.local` (step 3). It deploys whatever is
 | --- | --- | --- |
 | Revenue, sales, sources | Gumroad API | Source is the referrer Gumroad records for each sale |
 | Facebook / Instagram account stats | Meta Graph API | Daily followers, reach, engagement |
+| TikTok account stats | TikTok Display API | Followers; daily views and engagements worked out from running totals |
 | Per-post stats | Blotato analytics | Facebook, Instagram, Threads, X, TikTok. Blotato refreshes them a limited number of times over 30 days depending on plan |
 | Publishing | Blotato API | First comment is native on Facebook and Instagram; on Threads and X it is posted as a reply; not available on TikTok |
 | Brand guide, AI writer's brand rules | Notion API | Read live and read-only; nothing stored |
 | Email subscribers, growth, campaign stats | MailerLite API | Synced every 6 hours |
 | Email drafts | Dashboard → MailerLite | Created as MailerLite drafts only; sending happens in MailerLite |
 
-Not built yet: Google Analytics, Search Console, and account-level (follower) stats for Threads, X and TikTok.
+Not built yet: Google Analytics, Search Console, and account-level (follower) stats for Threads and X.

@@ -104,7 +104,7 @@ export default function Social() {
       )}
 
       {metrics.isLoading ? <div className="text-sm text-slate-500">Loading…</div> : available.length === 0 ? (
-        <Empty>No social stats yet. They appear after the first sync once Facebook and Instagram are connected in Settings.</Empty>
+        <Empty>No social stats yet. They appear after the first sync once Facebook, Instagram or TikTok is connected in Settings.</Empty>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
@@ -112,8 +112,10 @@ export default function Social() {
               hint={f.known ? `${f.change >= 0 ? '+' : ''}${num(f.change)} in ${days} days` : 'Growth shows after a second daily sync'} />
             <Stat label="Follower growth" value={f.known && f.first ? `${((f.change / f.first) * 100).toFixed(1)}%` : '–'}
               hint={fPrev.known ? `${fPrev.change >= 0 ? '+' : ''}${num(fPrev.change)} in the previous ${days} days` : undefined} />
-            <Stat label="Reach" value={num(sum(cur, 'reach'))} hint={change(sum(cur, 'reach'), sum(prev, 'reach'), days)} />
-            <Stat label="Impressions" value={num(sum(cur, 'impressions'))} hint={change(sum(cur, 'impressions'), sum(prev, 'impressions'), days)} />
+            {platform === 'tiktok'
+              ? <Stat label="Reach" value="–" hint="TikTok doesn't report reach" />
+              : <Stat label="Reach" value={num(sum(cur, 'reach'))} hint={change(sum(cur, 'reach'), sum(prev, 'reach'), days)} />}
+            <Stat label={platform === 'tiktok' ? 'Video views' : 'Impressions'} value={num(sum(cur, 'impressions'))} hint={change(sum(cur, 'impressions'), sum(prev, 'impressions'), days)} />
             <Stat label="Engagements" value={num(sum(cur, 'engagement'))} hint={change(sum(cur, 'engagement'), sum(prev, 'engagement'), days)} />
             <Stat label="Engagement rate" value={pct(rate)}
               hint={rate !== null && ratePrev !== null ? `${pct(ratePrev)} in the previous ${days} days` : 'Engagements ÷ reach'} />
@@ -219,8 +221,8 @@ export default function Social() {
           </div>
 
           <p className="mt-3 text-xs text-slate-500">
-            Account stats come from Meta (Facebook and Instagram) and refresh daily. Post stats come from Blotato.
-            Instagram doesn't report new follows per day, so that column shows “–” for it.
+            Account stats come from Meta (Facebook, Instagram) and TikTok and refresh daily. TikTok only reports running totals, so its daily views and engagements are the change since the previous day's sync, and it has no reach figure. Post stats come from Blotato.
+            Instagram and TikTok don't report new follows per day, so that column shows “–” for them.
           </p>
         </>
       )}

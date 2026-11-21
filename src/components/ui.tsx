@@ -61,6 +61,11 @@ export function Badge({ status, label }: { status: string; label?: string }) {
   return <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status] ?? 'bg-slate-100 text-slate-700'}`}>{label ?? status}</span>
 }
 
+/** Marks a post that was made in the dashboard. */
+export function DashboardTag() {
+  return <span className="inline-block rounded bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">Dashboard</span>
+}
+
 export function RangePicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   return (
     <div className="flex overflow-hidden rounded-md border border-slate-300 bg-white text-sm">

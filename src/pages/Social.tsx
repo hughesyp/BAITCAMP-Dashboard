@@ -3,15 +3,11 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Bar, CartesianGrid, ComposedChart, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Empty, ErrorNote, PageHeader, RangePicker, Stat } from '../components/ui'
+import { DashboardTag, Empty, ErrorNote, PageHeader, RangePicker, Stat } from '../components/ui'
 import { useMetrics, usePosts } from '../lib/data'
+import { combinePosts, engagementOf, metricOf, useSocialPosts } from '../lib/posts'
 import { supabase } from '../lib/supabase'
 import { lastDays, num, PLATFORMS, platformLabel, ymd, type Metric } from '../lib/util'
-
-const pick = (m: Record<string, number> | null, ...keys: string[]) => {
-  for (const k of keys) if (m && m[k] !== undefined) return Number(m[k])
-  return 0
-}
 
 /** Change as "+12% vs previous 30 days", or null when there is nothing to compare with. */
 function change(cur: number, prev: number, days: number) {
@@ -41,6 +37,7 @@ export default function Social() {
   // Load twice the range so each figure can be compared with the period before it.
   const metrics = useMetrics(days * 2)
   const posts = usePosts(days)
+  const socialPosts = useSocialPosts(days)
   const links = useQuery({
     queryKey: ['profile-links'],
     queryFn: async () => ((await supabase.from('brand_settings').select('profile_links').eq('id', 1).single()).data?.profile_links ?? {}) as Record<string, string>,
@@ -84,11 +81,10 @@ export default function Social() {
     Engagements: sum(cur.filter((r) => r.date === d), 'engagement'),
   }))
 
-  // Posts published in the period, with their Blotato stats
-  const published = (posts.data ?? []).flatMap((p) => p.post_targets.map((t) => ({ post: p, t })))
-    .filter(({ t }) => t.status === 'published' && (!platform || t.platform === platform))
-  const engagementOf = (m: Record<string, number> | null) => pick(m, 'likes', 'reactions') + pick(m, 'comments') + pick(m, 'shares') + pick(m, 'saves')
-  const topPosts = [...published].sort((a, b) => engagementOf(b.t.metrics) - engagementOf(a.t.metrics)).slice(0, 5)
+  // Every post on the accounts in the period (platform stats; Blotato for X)
+  const allPublished = combinePosts(posts.data ?? [], socialPosts.data ?? []).filter((r) => r.status === 'published')
+  const published = allPublished.filter((r) => !platform || r.platform === platform)
+  const topPosts = [...published].sort((a, b) => engagementOf(b.metrics) - engagementOf(a.metrics)).slice(0, 5)
 
   const pct = (v: number | null) => (v === null ? '–' : `${v.toFixed(1)}%`)
 
@@ -97,7 +93,7 @@ export default function Social() {
       <PageHeader title="Social accounts" subtitle={`Account growth and reach over the last ${days} days`}>
         <RangePicker value={days} onChange={setDays} />
       </PageHeader>
-      <ErrorNote error={metrics.error ?? posts.error} />
+      <ErrorNote error={metrics.error ?? posts.error ?? socialPosts.error} />
       {xProfile && (
         <p className="mb-3 text-sm text-slate-600">
           X stats aren't tracked here. <a href={xProfile} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">Open the X profile ↗</a>
@@ -203,7 +199,7 @@ export default function Social() {
                       <td className="td">{num(sum(all, 'engagement'))}</td>
                       <td className="td">{pct(engRate(all))}</td>
                       <td className="td">{num(sum(all, 'profile_views'))}</td>
-                      <td className="td">{num((posts.data ?? []).flatMap((x) => x.post_targets).filter((t) => t.platform === p.id && t.status === 'published').length)}</td>
+                      <td className="td">{num(allPublished.filter((r) => r.platform === p.id).length)}</td>
                     </tr>
                   )
                 })}
@@ -216,17 +212,17 @@ export default function Social() {
               <div className="text-sm font-semibold">Top posts in this period</div>
               <Link to="/posts" className="text-xs text-brand-600 hover:text-link-hover hover:underline">All post performance</Link>
             </div>
-            {topPosts.length === 0 ? <Empty>No posts published through the dashboard in this period.</Empty> : (
+            {topPosts.length === 0 ? <Empty>No posts with stats in this period.</Empty> : (
               <div className="divide-y divide-slate-100">
-                {topPosts.map(({ post, t }) => (
-                  <div key={t.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                {topPosts.map((r) => (
+                  <div key={r.key} className="flex items-center justify-between gap-3 py-2 text-sm">
                     <div className="min-w-0">
-                      <div className="truncate">{t.caption || post.title || '(no caption)'}</div>
-                      <div className="text-xs text-slate-500">{platformLabel(t.platform)}{t.published_at && ` · ${format(new Date(t.published_at), 'd MMM')}`}</div>
+                      <div className="truncate">{r.caption || r.title || '(no caption)'}</div>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500">{r.dashboard && <DashboardTag />}{platformLabel(r.platform)}{r.date && ` · ${format(new Date(r.date), 'd MMM')}`}</div>
                     </div>
                     <div className="shrink-0 text-right text-xs text-slate-600">
-                      <div className="font-medium text-ink">{num(engagementOf(t.metrics))} engagements</div>
-                      <div>{num(pick(t.metrics, 'views', 'impressions'))} views{t.public_url && <> · <a href={t.public_url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">Open</a></>}</div>
+                      <div className="font-medium text-ink">{num(engagementOf(r.metrics))} engagements</div>
+                      <div>{num(metricOf(r.metrics, 'views', 'impressions') ?? 0)} views{r.url && <> · <a href={r.url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">Open</a></>}</div>
                     </div>
                   </div>
                 ))}
@@ -236,7 +232,7 @@ export default function Social() {
 
           <p className="mt-3 text-xs text-slate-500">
             Account stats come from Meta (Facebook, Instagram, Threads) and TikTok and refresh daily. TikTok only reports running totals, so its daily views and engagements are the change since the previous day's sync, and it has no reach figure.
-            Threads reports profile views, likes, replies, reposts, quotes and link clicks, but not reach or impressions. Post stats come from Blotato.
+            Threads reports profile views, likes, replies, reposts, quotes and link clicks, but not reach or impressions. Post stats come from each platform (X from Blotato).
             Instagram, Threads and TikTok don't report new follows per day, so that column shows “–” for them.
           </p>
         </>

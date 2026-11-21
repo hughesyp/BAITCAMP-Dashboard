@@ -218,7 +218,8 @@ This uses the values in `.env.production.local` (step 3). It deploys whatever is
 | Facebook / Instagram account stats | Meta Graph API | Daily followers, reach, engagement |
 | TikTok account stats | TikTok Display API | Followers; daily views and engagements worked out from running totals |
 | Threads account stats | Threads API (Meta) | Followers; daily profile views, engagements and link clicks |
-| Per-post stats | Blotato analytics | Facebook, Instagram, Threads, X, TikTok. Blotato refreshes them a limited number of times over 30 days depending on plan |
+| Per-post stats | Each platform's API | Every post on the Facebook Page, Instagram, Threads and TikTok accounts from the last 90 days, refreshed hourly. Uses the same connections as the account stats, so nothing extra to set up |
+| Per-post stats for X | Blotato analytics | Only for posts made in the dashboard. Blotato refreshes them a limited number of times over 30 days depending on plan |
 | Publishing | Blotato API | First comment is native on Facebook and Instagram; on Threads and X it is posted as a reply; not available on TikTok |
 | Brand guide, AI writer's brand rules | Notion API | Read live and read-only; nothing stored |
 | Email subscribers, growth, campaign stats | MailerLite API | Synced every 6 hours |

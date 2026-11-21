@@ -11,7 +11,7 @@ This README is the handover document for a developer picking the project up. For
 | Overview | `/` | Net revenue, email subscribers, sales, followers, reach and posts over 7/30/90 days; revenue per day; top sales sources; email summary (signups, unsubscribes, open/click rates, last campaign); this month's targets; social accounts |
 | Revenue & sources | `/revenue` | Gumroad sales by referrer source and by product, plus recent sales |
 | Social accounts | `/social` | Facebook/Instagram follower growth, reach, impressions, engagement rate vs the previous period, per-platform table, top posts |
-| Post performance | `/posts` | Every post sent through the dashboard, per platform, with status, link and stats; filter by person or platform |
+| Post performance | `/posts` | Every post on the connected accounts (last 90 days) plus dashboard drafts and scheduled posts, with stats from each platform. Posts made in the dashboard are tagged and tinted; filter by origin, person or platform |
 | Create post | `/compose` | Upload media, choose platforms, write a caption and first comment per platform, publish now or schedule. Includes the AI caption writer |
 | Calendar | `/calendar` | Month view of draft, scheduled and published posts |
 | Media library | `/media` | Shared images and videos, with tags and a "brand asset" flag |
@@ -91,7 +91,7 @@ supabase/
     sync-social/        Pull Facebook, Instagram, Threads and TikTok daily stats into `metrics_daily`
     tiktok-auth/        Connect the TikTok account (OAuth); tokens in `oauth_tokens`, refreshed by `_shared/tiktok.ts`
     threads-auth/       Connect the Threads account (OAuth); long-lived token in `oauth_tokens`, renewed by `_shared/threads.ts`
-    sync-posts/         Update post status and per-post stats from Blotato
+    sync-posts/         Update post status from Blotato, X stats from Blotato, and (hourly) every account post with native stats via `_shared/account-posts.ts`
     publish-post/       Send a saved post to Blotato, one submission per platform
     ai-write/           Generate or rewrite captions via OpenRouter, following the Notion brand pages
     notion-pages/       Read-only, live view of the configured Notion pages (nothing stored)
@@ -112,7 +112,8 @@ supabase/
 | `metrics_daily` | Account-level stats keyed by (platform, date, metric), e.g. followers, reach, engagement | `sync-social` |
 | `oauth_tokens` | Sign-in tokens for OAuth connections (TikTok, Threads). No browser access at all; only Edge Functions read it | `tiktok-auth`, `threads-auth`, `sync-social` |
 | `posts` | A post: author, media URLs, schedule time, overall status | Front end (author) |
-| `post_targets` | One row per platform for a post: caption, first comment, status, Blotato ids, public URL, stats | Front end for drafts; `publish-post` and `sync-posts` afterwards |
+| `post_targets` | One row per platform for a post: caption, first comment, status, Blotato ids, public URL, Blotato stats | Front end for drafts; `publish-post` and `sync-posts` afterwards |
+| `social_posts` | Every post on the connected Facebook Page, Instagram, Threads and TikTok accounts (last 90 days) with stats from the platform; `post_target_id` links ones made in the dashboard. Read-only for signed-in users | `sync-posts` |
 | `media_assets` | Media library entries pointing at files in the `media` bucket | Front end |
 | `targets` | Monthly targets, optionally per platform or per person | Admin |
 | `ideas` | Ideas/tasks board | Any active user |
@@ -126,7 +127,7 @@ Also: view `team` (names and roles only, so anyone can see who made a post witho
 
 ## How the main flows work
 
-**Publishing a post.** The composer saves a `posts` row and one `post_targets` row per platform, then calls `publish-post`. That function looks up the Blotato account for each platform in `integration_settings`, sends one request per platform, and stores the returned submission id. Media is uploaded to Supabase Storage first and Blotato fetches it from the public URL. `sync-posts` (every 15 minutes, or the "Refresh stats" button) polls Blotato for the outcome, saves the public post URL, and later pulls per-post stats, matching Blotato's analytics items to our rows by post URL. Only targets in `draft` or `failed` state are ever sent, so a retry cannot double-post.
+**Publishing a post.** The composer saves a `posts` row and one `post_targets` row per platform, then calls `publish-post`. That function looks up the Blotato account for each platform in `integration_settings`, sends one request per platform, and stores the returned submission id. Media is uploaded to Supabase Storage first and Blotato fetches it from the public URL. `sync-posts` (every 15 minutes, or the "Refresh stats" button) polls Blotato for the outcome, saves the public post URL, and later pulls per-post stats from Blotato, matching its analytics items to our rows by post URL (these are only shown for X). Separately, at most hourly (or when Refresh stats is pressed, at most every 5 minutes), it lists every post on the connected accounts from the platforms themselves into `social_posts`, and links the ones made in the dashboard by matching their public URL (by shortcode or numeric id, so different URL forms still match). Only targets in `draft` or `failed` state are ever sent, so a retry cannot double-post.
 
 **First comments.** Native on Facebook and Instagram. On Threads and X the first comment is sent as a reply in the thread. TikTok has none.
 
@@ -188,6 +189,7 @@ The app was tested end to end against a local Supabase with sample data: sign-up
 - The Notion reader (`notion-pages`): the block-to-Markdown converter was unit-tested on sample blocks, but not against the live Notion API.
 - TikTok (`tiktok-auth`, TikTok part of `sync-social`): connecting and the first sync worked against the real account in sandbox mode (Nov 2026), so the token exchange, `user.info.stats` and `video.list` calls are confirmed. Still to confirm: token refresh after the first access token expires, and that the per-video counts (`view_count`, `like_count`, `comment_count`, `share_count`) are non-zero. If TikTok daily views stay at 0, check those field names first.
 
+- Native post stats (`_shared/account-posts.ts`): built from the platforms' docs and tested only against a stand-in server. Unconfirmed: the Facebook post list fields (`permalink_url`, `shares`, reaction and comment summaries) and which post insights metrics Meta still accepts (`post_media_view`, `post_total_media_view_unique`, `post_clicks`; ones it refuses are skipped and noted in the sync log); Instagram `views` on carousels; and that Blotato's public URLs match the platforms' permalinks closely enough to link dashboard posts. If a dashboard post shows up untagged, compare the two links first.
 - Threads (`threads-auth`, Threads part of `sync-social`): built from Meta's docs and tested only against a stand-in server. Unconfirmed: the response shape of `followers_count` and of the per-day totals, and whether a `views` value's `end_time` marks the end of the day (assumed, as for Facebook). If Threads profile views look shifted by a day, check that first.
 
-Not built: Google Analytics, Google Search Console, and account-level stats for X (X charges for API access; `brand_settings.profile_links.twitter`, set in Settings, puts a link to the profile on the Social accounts page). Per-post X stats do come through Blotato.
+Not built: Google Analytics, Google Search Console, and account-level stats for X (X charges for API access; `brand_settings.profile_links.twitter`, set in Settings, puts a link to the profile on the Social accounts page). Per-post X stats come through Blotato, for posts made in the dashboard only.

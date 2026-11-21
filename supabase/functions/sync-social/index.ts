@@ -5,37 +5,24 @@
 // Settings (integration_settings): meta = { pageId, igUserId }
 // TikTok and Threads: connected in Settings (tokens in public.oauth_tokens), see _shared/tiktok.ts and _shared/threads.ts
 import { getCaller, getSetting, logSync, requireAdminOrCron, serve } from "../_shared/common.ts";
+import { getJson, metaBase, pageToken as getPageToken } from "../_shared/meta.ts";
 import { threads, threadsToken } from "../_shared/threads.ts";
 import { tiktok, tiktokToken } from "../_shared/tiktok.ts";
 
 type Row = { platform: string; date: string; metric: string; value: number };
 const day = (d: Date) => d.toISOString().slice(0, 10);
 
-async function getJson(url: string) {
-  const res = await fetch(url);
-  const data = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(data?.error?.message ?? data?.message ?? `HTTP ${res.status}`);
-  return data;
-}
-
 async function syncMeta(db: any, days: number, rows: Row[], notes: string[]) {
   const token = Deno.env.get("META_ACCESS_TOKEN");
   if (!token) { notes.push("meta: META_ACCESS_TOKEN not set, skipped"); return; }
-  const base = `https://graph.facebook.com/${Deno.env.get("META_GRAPH_VERSION") ?? "v23.0"}`;
+  const base = metaBase();
   const today = day(new Date());
   const since = Math.floor((Date.now() - days * 86400000) / 1000);
   const until = Math.floor(Date.now() / 1000);
   const { pageId, igUserId } = await getSetting<{ pageId?: string; igUserId?: string }>(db, "meta");
 
   if (pageId) {
-    // Page insights only accept a Page token. If the stored token is a user token, swap it
-    // for the Page's own token here (a Page token simply returns itself).
-    let pageToken = token;
-    try {
-      const p = await getJson(`${base}/${pageId}?fields=access_token&access_token=${token}`);
-      if (p.access_token) pageToken = p.access_token;
-      else notes.push("facebook: could not get a Page token; the login that made the token may not have full access to this Page");
-    } catch (e) { notes.push(`facebook page token: ${(e as Error).message}`); }
+    const pageToken = await getPageToken(pageId, token, notes);
 
     try {
       const page = await getJson(`${base}/${pageId}?fields=followers_count,fan_count&access_token=${pageToken}`);

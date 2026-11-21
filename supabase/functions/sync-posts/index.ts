@@ -1,5 +1,8 @@
-// Updates publishing status and performance metrics of posts sent through Blotato.
-// Any signed-in user can trigger it (it only reads from Blotato); also run by the scheduler.
+// Updates publishing status of posts sent through Blotato, their Blotato stats (used for X), and
+// every post on the connected accounts with stats from the platforms (_shared/account-posts.ts).
+// Body: { force?: boolean }. Account posts refresh at most hourly (every 5 minutes when forced).
+// Any signed-in user can trigger it (it only reads); also run by the scheduler every 15 minutes.
+import { syncAccountPosts } from "../_shared/account-posts.ts";
 import { blotato, getCaller, logSync, serve } from "../_shared/common.ts";
 
 const num = (v: unknown) => (v === null || v === undefined || v === "" ? undefined : Number(v));
@@ -13,7 +16,7 @@ function cleanMetrics(m: any): Record<string, number> {
   return out;
 }
 
-serve(async (req, _body, db) => {
+serve(async (req, body, db) => {
   await getCaller(req, db);
   const notes: string[] = [];
   let statusUpdates = 0;
@@ -81,5 +84,17 @@ serve(async (req, _body, db) => {
   }
 
   await logSync(db, "posts", notes.length === 0, `${statusUpdates} status, ${metricUpdates} metric updates. ${notes.join(" | ")}`);
-  return { ok: notes.length === 0, statusUpdates, metricUpdates, notes };
+
+  // 3. All posts on the connected accounts, with native stats.
+  let accountPosts: number | null = null;
+  const { data: last } = await db.from("sync_log").select("ran_at").eq("source", "account-posts")
+    .order("ran_at", { ascending: false }).limit(1).maybeSingle();
+  const age = last ? Date.now() - new Date(last.ran_at).getTime() : Infinity;
+  if (age > (body.force ? 5 : 55) * 60_000) {
+    const accountNotes: string[] = [];
+    accountPosts = await syncAccountPosts(db, accountNotes);
+    await logSync(db, "account-posts", accountNotes.length === 0, `${accountPosts} account posts. ${accountNotes.join(" | ")}`);
+    notes.push(...accountNotes);
+  }
+  return { ok: notes.length === 0, statusUpdates, metricUpdates, accountPosts, notes };
 });

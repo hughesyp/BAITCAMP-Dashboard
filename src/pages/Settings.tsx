@@ -217,8 +217,8 @@ export default function Settings() {
         <button className="btn btn-primary mt-3" disabled={!accounts || busy === 'save-blotato'} onClick={() => saveSetting('blotato', mapping)}>Save account mapping</button>
       </div>
 
-      <div className="mt-4">
-        <div className="card max-w-xl space-y-3">
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="card space-y-3">
           <div className="text-sm font-semibold">Facebook + Instagram stats</div>
           <div>
             <label className="label" htmlFor="pageId">Facebook Page ID</label>
@@ -230,10 +230,8 @@ export default function Settings() {
           </div>
           <button className="btn btn-primary" onClick={() => saveSetting('meta', meta)}>Save</button>
         </div>
-      </div>
 
-      <div className="mt-4">
-        <div className="card max-w-xl space-y-3">
+        <div className="card space-y-3">
           <div className="text-sm font-semibold">TikTok stats</div>
           {tiktokStatus.isLoading ? <div className="text-sm text-slate-500">Loading…</div> : tiktokStatus.error ? <ErrorNote error={tiktokStatus.error} /> : !tiktokStatus.data?.configured ? (
             <p className="text-sm text-slate-600">Set <code>TIKTOK_CLIENT_KEY</code> and <code>TIKTOK_CLIENT_SECRET</code> first (SETUP.md section 6d). In the TikTok app, the redirect URI must be <code className="break-all">{tiktokRedirect()}</code></p>
@@ -252,10 +250,8 @@ export default function Settings() {
             </>
           )}
         </div>
-      </div>
 
-      <div className="mt-4">
-        <div className="card max-w-xl space-y-3">
+        <div className="card space-y-3">
           <div className="text-sm font-semibold">Threads stats</div>
           {threadsStatus.isLoading ? <div className="text-sm text-slate-500">Loading…</div> : threadsStatus.error ? <ErrorNote error={threadsStatus.error} /> : !threadsStatus.data?.configured ? (
             <p className="text-sm text-slate-600">Set <code>THREADS_APP_ID</code> and <code>THREADS_APP_SECRET</code> first (SETUP.md section 6e). In the Meta app's Threads settings, the redirect callback URL must be <code className="break-all">{threadsRedirect()}</code></p>
@@ -274,10 +270,8 @@ export default function Settings() {
             </>
           )}
         </div>
-      </div>
 
-      <div className="mt-4">
-        <div className="card max-w-xl space-y-3">
+        <div className="card space-y-3">
           <div className="text-sm font-semibold">X (Twitter) profile</div>
           <p className="text-sm text-slate-600">X stats aren't pulled in, because X charges for API access. The Social accounts page links to the profile instead.</p>
           <div>
